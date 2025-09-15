@@ -8,7 +8,6 @@ import { useAuth } from "./context/AuthContext";
 const Layout: React.FC = () => {
   const { user, logout } = useAuth();
   const [collapsed, setCollapsed] = useState(false);
-
   const handleLogout = async () => {
     await logout();
     window.location.href = "/login";

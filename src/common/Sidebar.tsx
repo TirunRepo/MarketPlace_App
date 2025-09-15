@@ -1,88 +1,13 @@
-import React, { useState, type JSX } from "react";
-import { Nav, OverlayTrigger, Tooltip } from "react-bootstrap";
-import { Link, useLocation } from "react-router-dom";
-import {
-  HouseDoorFill,
-  BoxSeam,
-  ClipboardCheck,
-  BarChart,
-  PeopleFill,
-  GearFill,
-  KeyFill,
-  List,
-} from "react-bootstrap-icons";
-
-interface MenuItem {
-  to: string;
-  icon: JSX.Element;
-  label: string;
-  action?: () => void;
-}
+import React, { useState } from "react";
+import { Nav } from "react-bootstrap";
+import { NavLink } from "react-router-dom";
+import { List } from "react-bootstrap-icons";
+import { useAuth } from "../context/AuthContext";
+import { menuItems } from "../menuConfig";
 
 const Sidebar: React.FC = () => {
-  const location = useLocation();
   const [collapsed, setCollapsed] = useState(false);
-
-  const menuItems: MenuItem[] = [
-    { to: "/dashboard", icon: <HouseDoorFill />, label: "Home" },
-    { to: "/inventory", icon: <BoxSeam />, label: "Inventory" },
-    { to: "/promotions", icon: <ClipboardCheck />, label: "Promotions" },
-    { to: "/markup", icon: <GearFill />, label: "Mark Up" },
-    { to: "/reports", icon: <BarChart />, label: "Reports" },
-    { to: "/admin", icon: <PeopleFill />, label: "Admin" },
-    { to: "/role-management", icon: <KeyFill />, label: "Role Mgmt" },
-  ];
-
-  // Collapse toggle as first item
-  const menuWithToggle: MenuItem[] = [
-    { to: "#", icon: <List />, label: "", action: () => setCollapsed(!collapsed) },
-    ...menuItems,
-  ];
-
-  const renderLink = (item: MenuItem) => {
-    const isToggle = !!item.action;
-    const isActive = location.pathname === item.to;
-
-    const linkContent = isToggle ? (
-      // Toggle item
-      <div
-        className="d-flex align-items-center justify-content-left my-1 px-3 py-2 rounded sidebar-link"
-        style={{
-          cursor: "pointer",
-          height: "42px",
-        }}
-        onClick={item.action}
-      >
-        <span className="fs-5">{item.icon}</span>
-      </div>
-    ) : (
-      // Navigation item
-      <Link
-        to={item.to}
-        className={`d-flex align-items-left my-1 px-3 py-2 rounded sidebar-link ${isActive ? "active" : ""}`}
-        style={{
-          height: "42px",
-          justifyContent:  "flex-start",
-        }}
-      >
-        <span className="fs-5">{item.icon}</span>
-        <span className={`sidebar-label ${collapsed ? "collapsed" : ""}`}>
-          {item.label}
-        </span>
-      </Link>
-    );
-
-    // Tooltip only for collapsed non-toggle items
-    if (collapsed && !isToggle) {
-      return (
-        <OverlayTrigger key={item.to} placement="right" overlay={<Tooltip>{item.label}</Tooltip>}>
-          <div>{linkContent}</div>
-        </OverlayTrigger>
-      );
-    }
-
-    return <div key={item.to}>{linkContent}</div>;
-  };
+  const { user } = useAuth();
 
   return (
     <div
@@ -94,11 +19,39 @@ const Sidebar: React.FC = () => {
         zIndex: 2,
       }}
     >
+      {/* Collapse Toggle */}
+      <div
+        className="d-flex align-items-center my-2 px-3 py-2 sidebar-link"
+        style={{ cursor: "pointer", height: "42px" }}
+        onClick={() => setCollapsed(!collapsed)}
+      >
+        <List size={20} />
+      </div>
+
+      {/* Menu Items */}
       <Nav className="flex-column mt-2">
-        {menuWithToggle.map(renderLink)}
+        {menuItems
+          .filter((item: any) => item.roles.includes(user?.role || ""))
+          .map((item) => (
+            <NavLink
+              key={item.to}
+              to={item.to}
+              className={({ isActive }) =>
+                `nav-link d-flex align-items-center sidebar-link ${isActive ? "active" : ""
+                }`
+              }
+            >
+              {item.icon}
+              <span
+                className={`sidebar-label ${collapsed ? "collapsed" : ""}`}
+              >
+                {item.label}
+              </span>
+            </NavLink>
+          ))}
       </Nav>
 
-      {/* Embedded focused CSS */}
+      {/* Embedded CSS */}
       <style>
         {`
           .sidebar-link {

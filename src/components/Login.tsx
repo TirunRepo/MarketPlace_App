@@ -20,10 +20,8 @@ const Login: React.FC = () => {
       debugger
       await login(values.userName, values.password);
       if (!user) return;
-      if (user.role === "Admin") navigate("/dashboard");
-      else if (user.role === "staff") navigate("/dashboard/staff");
-      else if (user.role === "manager") navigate("/dashboard/manager");
-    } catch (err) {
+      if (user.role === "Admin" || user.role === "Agent") navigate("/dashboard");
+     } catch (err) {
       alert("Invalid username or password");
       setSubmitting(false);
     }

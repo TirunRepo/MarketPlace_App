@@ -1,25 +1,23 @@
-// ProtectedRoute.tsx
-import { Navigate, useLocation, Outlet } from "react-router-dom";
+import React from "react";
+import { Navigate, Outlet } from "react-router-dom";
 import { useAuth } from "./context/AuthContext";
 import Loading from "./common/Loading";
 
-const ProtectedRoute = () => {
-  const { isAuth, loading } = useAuth();
-  const location = useLocation();
+interface ProtectedRouteProps {
+  roles?: string[];
+  children?: React.ReactNode;
+}
 
-  if (loading) {
-    return <Loading />; // center spinner only while checking auth
+const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ roles  }) => {
+  const { user, isAuth, loading } = useAuth();
+
+  if (loading) return <div><Loading/></div>;
+  if (!isAuth) return <Navigate to="/login" replace />;
+  if (roles && user && !roles.includes(user.role)) {
+    return <Navigate to="/dashboard" replace />;
   }
 
-  if (!isAuth) {
-    return <Navigate to="/login" state={{ from: location }} replace />;
-  }
-
-  return (
-    <>
-      <Outlet />
-    </>
-  );
+  return <Outlet />;
 };
 
 export default ProtectedRoute;
