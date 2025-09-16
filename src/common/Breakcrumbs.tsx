@@ -1,6 +1,7 @@
 import React from "react";
 import { Breadcrumb } from "react-bootstrap";
 import { Link, useLocation } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 
 const css = {
   breadcrumbBar: {
@@ -19,6 +20,7 @@ const css = {
 
 const Breadcrumbs: React.FC = () => {
   const location = useLocation();
+  const {user} = useAuth();
   const pathnames = location.pathname.split("/").filter((x) => x);
 
   return (
@@ -26,6 +28,9 @@ const Breadcrumbs: React.FC = () => {
       <Breadcrumb style={css.breadcrumbSmall}>
         <Breadcrumb.Item linkAs={Link} linkProps={{ to: "/dashboard" }}>
           Home
+        </Breadcrumb.Item>
+         <Breadcrumb.Item active>
+          {user?.role}
         </Breadcrumb.Item>
         {pathnames.map((value, index) => {
           const to = `/${pathnames.slice(0, index + 1).join("/")}`;

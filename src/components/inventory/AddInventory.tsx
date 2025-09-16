@@ -1,9 +1,22 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Modal, Button, Form, Row, Col } from "react-bootstrap";
-import CruiseService, { type ICabinRow } from "../Services/CruiseService";
+import CruiseService, {
+  type ICabinRow,
+  type IDestination,
+  type IPort,
+  type ICruiseLine,
+  type IShip,
+  type ICruiseInventory,
+} from "../Services/CruiseService";
 
 const AddCruiseInventory: React.FC = () => {
   const [show, setShow] = useState(false);
+
+  // Dropdown states
+  const [destinations, setDestinations] = useState<IDestination[]>([]);
+  const [departurePorts, setDeparturePorts] = useState<IPort[]>([]);
+  const [cruiseLines, setCruiseLines] = useState<ICruiseLine[]>([]);
+  const [ships, setShips] = useState<IShip[]>([]);
 
   const [form, setForm] = useState({
     sailDate: "",
@@ -11,18 +24,74 @@ const AddCruiseInventory: React.FC = () => {
     nights: "",
     packageName: "",
     destination: "",
-    cruiseLine: "",
     departurePort: "",
+    cruiseLine: "",
     shipName: "",
     shipCode: "",
     categoryId: "",
     stateroomType: "",
     cabinOccupancy: "",
-    cabins: [] as ICabinRow[],
     currency: "",
-    pricingType: "", // Net or Commissionable
-    commissionPercentage: "", // only used if pricingType = Commissionable
+    pricingType: "",
+    commissionPercentage: "",
+    singlePrice: "",
+    doublePrice: "",
+    threeFourthPrice: "",
+    nccf: "",
+    tax: "",
+    grats: "",
+    cabins: [] as ICabinRow[],
   });
+
+  useEffect(() => {
+    const loadDestinations = async () => {
+      const dests = await CruiseService.getDestinations();
+      setDestinations(dests.data);
+    };
+     const loadCruiselines = async () => {
+      const cruiseLine = await CruiseService.getCruiseLine();
+      setCruiseLines(cruiseLine.data);
+    };
+    loadDestinations();
+    loadCruiselines()
+  }, []);
+
+  useEffect(() => {
+    if (form.destination) {
+      CruiseService.getPorts(form.destination).then((res) => {
+        setDeparturePorts(res.data)
+      });
+      setForm((prev) => ({
+        ...prev,
+        departurePort: "",
+        cruiseLine: "",
+        shipName: "",
+      }));
+      setCruiseLines([]);
+      setShips([]);
+    } else {
+      setDeparturePorts([]);
+      setCruiseLines([]);
+      setShips([]);
+      setForm((prev) => ({
+        ...prev,
+        departurePort: "",
+        cruiseLine: "",
+        shipName: "",
+      }));
+    }
+  }, [form.destination]);
+
+
+  useEffect(() => {
+    if (form.cruiseLine) {
+      CruiseService.getShips(form.cruiseLine).then((res) => setShips(res.data));
+      setForm((prev) => ({ ...prev, shipName: "" }));
+    } else {
+      setShips([]);
+      setForm((prev) => ({ ...prev, shipName: "" }));
+    }
+  }, [form.cruiseLine]);
 
   const handleChange = (
     e: React.ChangeEvent<
@@ -33,7 +102,6 @@ const AddCruiseInventory: React.FC = () => {
     setForm((prev) => ({ ...prev, [name]: value }));
   };
 
-  /** Add new empty cabin row */
   const addCabin = () => {
     setForm((prev) => ({
       ...prev,
@@ -54,7 +122,6 @@ const AddCruiseInventory: React.FC = () => {
     }));
   };
 
-  /** Update cabin row */
   const handleCabinChange = (
     index: number,
     field: keyof ICabinRow,
@@ -64,12 +131,48 @@ const AddCruiseInventory: React.FC = () => {
     updated[index][field] = value as never;
     setForm((prev) => ({ ...prev, cabins: updated }));
   };
-
-  /** Save to API */
   const handleSave = async () => {
     try {
-      await CruiseService.saveCruiseInventory(form);
-      alert("Cruise Inventory Saved Successfully ✅");
+      const inventoryPayload: ICruiseInventory = {
+        sailDate: form.sailDate,
+        groupId: form.groupId,
+        nights: form.nights,
+        packageName: form.packageName,
+        destination: form.destination,
+        departurePort: form.departurePort,
+        cruiseLine: form.cruiseLine,
+        shipName: form.shipName,
+        shipCode: form.shipCode,
+        categoryId: form.categoryId,
+        stateroomType: form.stateroomType,
+        cabinOccupancy: form.cabinOccupancy,
+        currency: form.currency,
+        cabins: form.cabins.map((cabin) => ({
+          cabinType: cabin.cabinType,
+          cabinNo: cabin.cabinNo,
+          status: cabin.status,
+          singlePrice: Number(cabin.singlePrice) || 0,
+          doublePrice: Number(cabin.doublePrice) || 0,
+          threeFourthPrice: Number(cabin.threeFourthPrice) || 0,
+          nccf: Number(cabin.nccf) || 0,
+          tax: Number(cabin.tax) || 0,
+          grats: Number(cabin.grats) || 0,
+        })),
+        pricingType: form.pricingType,
+        commissionPercentage:
+          form.pricingType === "Commissionable"
+            ? Number(form.commissionPercentage)
+            : null,
+        singlePrice: Number(form.singlePrice) || 0,
+        doublePrice: Number(form.doublePrice) || 0,
+        threeFourthPrice: Number(form.threeFourthPrice) || 0,
+        nccf: Number(form.nccf) || 0,
+        tax: Number(form.tax) || 0,
+        grats: Number(form.grats) || 0,
+      };
+
+      await CruiseService.saveCruiseInventory(inventoryPayload);
+      alert("Cruise Inventory & Cabins saved successfully ✅");
       setShow(false);
     } catch (err) {
       console.error(err);
@@ -77,9 +180,9 @@ const AddCruiseInventory: React.FC = () => {
     }
   };
 
+
   return (
     <>
-      {/* Button to open modal */}
       <Button variant="primary" onClick={() => setShow(true)}>
         Add Cruise Inventory
       </Button>
@@ -90,7 +193,7 @@ const AddCruiseInventory: React.FC = () => {
         </Modal.Header>
         <Modal.Body>
           <Form>
-            {/* Row 1 */}
+            {/* Sail Date, GroupId, Nights */}
             <Row className="mb-3">
               <Col>
                 <Form.Group>
@@ -105,7 +208,7 @@ const AddCruiseInventory: React.FC = () => {
               </Col>
               <Col>
                 <Form.Group>
-                  <Form.Label>Group Id</Form.Label>
+                  <Form.Label>Group ID</Form.Label>
                   <Form.Control
                     type="text"
                     name="groupId"
@@ -128,89 +231,92 @@ const AddCruiseInventory: React.FC = () => {
             </Row>
 
             {/* Package Name */}
-            <Row className="mb-3">
-              <Col>
-                <Form.Group>
-                  <Form.Label>Package Name</Form.Label>
-                  <Form.Control
-                    type="text"
-                    name="packageName"
-                    value={form.packageName}
-                    onChange={handleChange}
-                  />
-                </Form.Group>
-              </Col>
-            </Row>
+            <Form.Group className="mb-3">
+              <Form.Label>Package Name</Form.Label>
+              <Form.Control
+                type="text"
+                name="packageName"
+                value={form.packageName}
+                onChange={handleChange}
+              />
+            </Form.Group>
 
-            {/* Destination & Cruise Line */}
-            <Row className="mb-3">
-              <Col>
-                <Form.Group>
-                  <Form.Label>Destination</Form.Label>
-                  <Form.Control
-                    as="select"
-                    name="destination"
-                    value={form.destination}
-                    onChange={handleChange}
-                  >
-                    <option value="">-- Select Destination --</option>
-                    <option value="Caribbean">Caribbean</option>
-                    <option value="Mediterranean">Mediterranean</option>
-                  </Form.Control>
-                </Form.Group>
-              </Col>
-              <Col>
-                <Form.Group>
-                  <Form.Label>Cruise Line</Form.Label>
-                  <Form.Control
-                    as="select"
-                    name="cruiseLine"
-                    value={form.cruiseLine}
-                    onChange={handleChange}
-                  >
-                    <option value="">-- Select Cruise Line --</option>
-                    <option value="Royal">Royal Caribbean</option>
-                    <option value="Carnival">Carnival</option>
-                  </Form.Control>
-                </Form.Group>
-              </Col>
-            </Row>
+            {/* Destination */}
+            <Form.Group className="mb-3">
+              <Form.Label>Destination</Form.Label>
+              <Form.Control
+                as="select"
+                name="destination"
+                value={form.destination}
+                onChange={handleChange}
+              >
+                <option value="">-- Select Destination --</option>
+                {destinations.map((d) => (
+                  <option key={d.destinationCode} value={d.destinationCode}>
+                    {d.destinationName}
+                  </option>
+                ))}
+              </Form.Control>
+            </Form.Group>
 
-            {/* Ship details */}
-            <Row className="mb-3">
-              <Col>
-                <Form.Group>
-                  <Form.Label>Departure Port</Form.Label>
-                  <Form.Control
-                    as="select"
-                    name="departurePort"
-                    value={form.departurePort}
-                    onChange={handleChange}
-                  >
-                    <option value="">-- Select Departure Port --</option>
-                    <option value="Miami">Miami</option>
-                    <option value="Barcelona">Barcelona</option>
-                  </Form.Control>
-                </Form.Group>
-              </Col>
-              <Col>
-                <Form.Group>
-                  <Form.Label>Ship Name</Form.Label>
-                  <Form.Control
-                    as="select"
-                    name="shipName"
-                    value={form.shipName}
-                    onChange={handleChange}
-                  >
-                    <option value="">-- Select Cruise Ship --</option>
-                    <option value="Symphony">Symphony of the Seas</option>
-                    <option value="CarnivalVista">Carnival Vista</option>
-                  </Form.Control>
-                </Form.Group>
-              </Col>
-            </Row>
+            {/* Departure Port */}
+            <Form.Group className="mb-3">
+              <Form.Label>Departure Port</Form.Label>
+              <Form.Control
+                as="select"
+                name="departurePort"
+                value={form.departurePort}
+                onChange={handleChange}
+                disabled={!departurePorts.length}
+              >
+                <option value="">-- Select Departure Port --</option>
+                {departurePorts.map((p) => (
+                  <option key={p.departurePortId} value={p.departurePortId}>
+                    {p.departurePortName}
+                  </option>
+                ))}
+              </Form.Control>
+            </Form.Group>
 
-            {/* Extra ship info */}
+            {/* Cruise Line */}
+            <Form.Group className="mb-3">
+              <Form.Label>Cruise Line</Form.Label>
+              <Form.Control
+                as="select"
+                name="cruiseLine"
+                value={form.cruiseLine}
+                onChange={handleChange}
+                disabled={!cruiseLines.length}
+              >
+                <option value="">-- Select Cruise Line --</option>
+                {cruiseLines.map((c) => (
+                  <option key={c.cruiseLineId} value={c.cruiseLineId}>
+                    {c.cruiseLineName}
+                  </option>
+                ))}
+              </Form.Control>
+            </Form.Group>
+
+            {/* Ship Name */}
+            <Form.Group className="mb-3">
+              <Form.Label>Ship Name</Form.Label>
+              <Form.Control
+                as="select"
+                name="shipName"
+                value={form.shipName}
+                onChange={handleChange}
+                disabled={!ships.length}
+              >
+                <option value="">-- Select Ship --</option>
+                {ships.map((s) => (
+                  <option key={s.cruiseShipId} value={s.cruiseShipId}>
+                    {s.shipName}
+                  </option>
+                ))}
+              </Form.Control>
+            </Form.Group>
+
+            {/* Ship Code, Category ID, Stateroom Type, Cabin Occupancy */}
             <Row className="mb-3">
               <Col>
                 <Form.Group>
@@ -225,7 +331,7 @@ const AddCruiseInventory: React.FC = () => {
               </Col>
               <Col>
                 <Form.Group>
-                  <Form.Label>Category Id</Form.Label>
+                  <Form.Label>Category ID</Form.Label>
                   <Form.Control
                     type="text"
                     name="categoryId"
@@ -243,7 +349,7 @@ const AddCruiseInventory: React.FC = () => {
                     value={form.stateroomType}
                     onChange={handleChange}
                   >
-                    <option value="">-- Select Stateroom Type --</option>
+                    <option value="">-- Select --</option>
                     <option value="Interior">Interior</option>
                     <option value="Balcony">Balcony</option>
                     <option value="Suite">Suite</option>
@@ -259,7 +365,7 @@ const AddCruiseInventory: React.FC = () => {
                     value={form.cabinOccupancy}
                     onChange={handleChange}
                   >
-                    <option value="">-- Select Cabin Occupancy --</option>
+                    <option value="">-- Select --</option>
                     <option value="Single">Single</option>
                     <option value="Double">Double</option>
                     <option value="Triple">Triple</option>
@@ -268,58 +374,47 @@ const AddCruiseInventory: React.FC = () => {
               </Col>
             </Row>
 
-            {/* Pricing Type Choice Group */}
-            <Row className="mb-3">
-              <Col>
-                <Form.Group>
-                  <Form.Label>Pricing Type</Form.Label>
-                  <div>
-                    <Form.Check
-                      inline
-                      type="radio"
-                      name="pricingType"
-                      value="Net"
-                      checked={form.pricingType === "Net"}
-                      onChange={handleChange}
-                      label="Net"
-                    />
+            {/* Pricing Type */}
+            <Form.Group className="mb-3">
+              <Form.Label>Pricing Type</Form.Label>
+              <div>
+                <Form.Check
+                  inline
+                  type="radio"
+                  name="pricingType"
+                  value="Net"
+                  checked={form.pricingType === "Net"}
+                  onChange={handleChange}
+                  label="Net"
+                />
+                <Form.Check
+                  inline
+                  type="radio"
+                  name="pricingType"
+                  value="Commissionable"
+                  checked={form.pricingType === "Commissionable"}
+                  onChange={handleChange}
+                  label={
+                    <div style={{ display: "flex", alignItems: "center" }}>
+                      <span>Commissionable</span>
+                      {form.pricingType === "Commissionable" && (
+                        <Form.Control
+                          type="number"
+                          min={0}
+                          max={100}
+                          name="commissionPercentage"
+                          value={form.commissionPercentage}
+                          onChange={handleChange}
+                          placeholder="%"
+                          style={{ width: "80px", marginLeft: 8 }}
+                        />
+                      )}
+                    </div>
+                  }
+                />
+              </div>
+            </Form.Group>
 
-                    {/* Commissionable with input field */}
-                    <Form.Check
-                      inline
-                      type="radio"
-                      name="pricingType"
-                      value="Commissionable"
-                      checked={form.pricingType === "Commissionable"}
-                      onChange={handleChange}
-                      label={
-                        <div style={{ display: "flex", alignItems: "center" }}>
-                          <span>Commissionable</span>
-                          {form.pricingType === "Commissionable" && (
-                            <Form.Control
-                              type="number"
-                              min="0"
-                              max="100"
-                              name="commissionPercentage"
-                              value={form.commissionPercentage}
-                              onChange={handleChange}
-                              placeholder="%"
-                              style={{
-                                width: "80px",
-                                marginLeft: "8px",
-                                display: "inline-block",
-                              }}
-                            />
-                          )}
-                        </div>
-                      }
-                    />
-                  </div>
-                </Form.Group>
-              </Col>
-            </Row>
-
-            {/* Pricing Section (only if selected) */}
             {form.pricingType && (
               <>
                 <h5 className="mt-3">Pricing</h5>
@@ -329,6 +424,7 @@ const AddCruiseInventory: React.FC = () => {
                       type="number"
                       placeholder="Single Price"
                       name="singlePrice"
+                      value={form.singlePrice}
                       onChange={handleChange}
                     />
                   </Col>
@@ -337,6 +433,7 @@ const AddCruiseInventory: React.FC = () => {
                       type="number"
                       placeholder="Double Price"
                       name="doublePrice"
+                      value={form.doublePrice}
                       onChange={handleChange}
                     />
                   </Col>
@@ -345,6 +442,7 @@ const AddCruiseInventory: React.FC = () => {
                       type="number"
                       placeholder="Three Fourth Price"
                       name="threeFourthPrice"
+                      value={form.threeFourthPrice}
                       onChange={handleChange}
                     />
                   </Col>
@@ -355,6 +453,7 @@ const AddCruiseInventory: React.FC = () => {
                       type="number"
                       placeholder="NCCF"
                       name="nccf"
+                      value={form.nccf}
                       onChange={handleChange}
                     />
                   </Col>
@@ -363,6 +462,7 @@ const AddCruiseInventory: React.FC = () => {
                       type="number"
                       placeholder="Tax"
                       name="tax"
+                      value={form.tax}
                       onChange={handleChange}
                     />
                   </Col>
@@ -371,6 +471,7 @@ const AddCruiseInventory: React.FC = () => {
                       type="number"
                       placeholder="Grats"
                       name="grats"
+                      value={form.grats}
                       onChange={handleChange}
                     />
                   </Col>
@@ -421,24 +522,20 @@ const AddCruiseInventory: React.FC = () => {
             </Button>
 
             {/* Currency */}
-            <Row className="mt-3">
-              <Col>
-                <Form.Group>
-                  <Form.Label>Currency</Form.Label>
-                  <Form.Control
-                    as="select"
-                    name="currency"
-                    value={form.currency}
-                    onChange={handleChange}
-                  >
-                    <option value="">-- Select Currency --</option>
-                    <option value="USD">USD</option>
-                    <option value="EUR">EUR</option>
-                    <option value="INR">INR</option>
-                  </Form.Control>
-                </Form.Group>
-              </Col>
-            </Row>
+            <Form.Group className="mt-3">
+              <Form.Label>Currency</Form.Label>
+              <Form.Control
+                as="select"
+                name="currency"
+                value={form.currency}
+                onChange={handleChange}
+              >
+                <option value="">-- Select Currency --</option>
+                <option value="USD">USD</option>
+                <option value="EUR">EUR</option>
+                <option value="INR">INR</option>
+              </Form.Control>
+            </Form.Group>
           </Form>
         </Modal.Body>
         <Modal.Footer>

@@ -18,7 +18,7 @@ class ApiUtility {
   });
 
   // Raw GET (returns full Axios response)
-  get = async <T>(url: string, params?: any): Promise<AxiosResponse<IApiResponse<T>>> => {
+  get = async <T>(url: string, params?: any): Promise<AxiosResponse<T>> => {
     return this.client.get(url, { params });
   };
 
@@ -31,6 +31,18 @@ class ApiUtility {
   // POST
   post = async <T>(url: string, body?: any): Promise<IApiResponse<T>> => {
     const res = await this.client.post<IApiResponse<T>>(url, body);
+    return res.data;
+  };
+
+  // PUT / UPDATE
+  put = async <T>(url: string, body?: any): Promise<IApiResponse<T>> => {
+    const res = await this.client.put<IApiResponse<T>>(url, body);
+    return res.data;
+  };
+
+  // DELETE
+  delete = async <T>(url: string, params?: any): Promise<IApiResponse<T>> => {
+    const res = await this.client.delete<IApiResponse<T>>(url, { params });
     return res.data;
   };
 

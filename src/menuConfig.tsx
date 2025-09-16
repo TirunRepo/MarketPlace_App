@@ -1,4 +1,4 @@
-import  { type ReactNode } from "react";
+import { type ReactNode } from "react";
 import {
   HouseDoorFill,
   BoxSeam,
@@ -13,20 +13,25 @@ import AddInventory from "./components/inventory/AddInventory";
 import Promotion from "./components/promotions/Promotion";
 import AddMarkup from "./components/markup/AddMarkup";
 import Dashboard from "./components/dashboard/Dashboard";
+import CruiseLineManager from "./components/inventory/cruiseLines/CruiseLineManager";
+import CruiseShipsManager from "./components/inventory/cruiseShips/CruiseShipsManger";
+import CruiseDeparturePortManager from "./components/inventory/cruiseDeparturesPort/CruiseDeparturePortManager";
+import CruiseDestinationManager from "./components/inventory/cruiseDestination/CruiseDestinatioManager";
 
 // Define roles clearly
 export type UserRole = "Admin" | "Agent";
 
-// ✅ Use ReactNode instead of ReactElement for flexibility
+// ✅ Extended MenuItem type with children
 export interface MenuItem {
-  to: string;          // Route path
-  icon: ReactNode;     // Icon component
-  label: string;       // Sidebar label
-  roles: UserRole[];   // Allowed roles
-  element: ReactNode;  // Component to render for the route
+  to: string;
+  icon: ReactNode;
+  label: string;
+  roles: UserRole[];
+  element: ReactNode;
+  children?: MenuItem[]; // <-- optional nested items
 }
 
-// ✅ Menu items array
+// ✅ Menu items array with subitems under Inventory
 export const menuItems: MenuItem[] = [
   {
     to: "/dashboard",
@@ -39,8 +44,45 @@ export const menuItems: MenuItem[] = [
     to: "/inventory",
     icon: <BoxSeam />,
     label: "Inventory",
-    roles: ["Agent","Admin"],
+    roles: ["Agent", "Admin"],
     element: <AddInventory />,
+    children: [
+      {
+        to: "/inventory/manage-inventory",
+        icon: <BoxSeam />,
+        label: "Cruise Inventory",
+        roles: ["Admin", "Agent"],
+        element: <AddInventory />,
+      },
+      {
+        to: "/inventory/manage-lines",
+        icon: <BoxSeam />,
+        label: "Manage Lines",
+        roles: ["Admin", "Agent"],
+        element: <CruiseLineManager />,
+      },
+      {
+        to: "/inventory/manage-ships",
+        icon: <BoxSeam />,
+        label: "Manage Ships",
+        roles: ["Admin", "Agent"],
+        element: <CruiseShipsManager />,
+      },
+      {
+        to: "/inventory/manage-destination",
+        icon: <BoxSeam />,
+        label: "Manage Destination",
+        roles: ["Admin", "Agent"],
+        element: <CruiseDestinationManager />,
+      },
+      {
+        to: "/inventory/manage-departure-port",
+        icon: <BoxSeam />,
+        label: "Manage Departure Port",
+        roles: ["Admin", "Agent"],
+        element: <CruiseDeparturePortManager />,
+      },
+    ],
   },
   {
     to: "/promotions",

@@ -1,7 +1,5 @@
 import ApiUtility, { type IApiResponse } from "../../utility/ApiUtility";
-// CruiseTypes.ts
 
-// Cabin row structure used in the form
 export interface ICabinRow {
   cabinType: string;
   cabinNo: string;
@@ -14,103 +12,55 @@ export interface ICabinRow {
   grats: number;
 }
 
-// Cruise Inventory structure
 export interface ICruiseInventory {
   sailDate: string;
   groupId: string;
   nights: string;
   packageName: string;
-  destination: string;
-  cruiseLine: string;
-  departurePort: string;
-  shipName: string;
+  destination: string;       // destination id
+  departurePort: string;     // departure port id
+  cruiseLine: string;        // cruise line id
+  shipName: string;          // ship id
   shipCode: string;
   categoryId: string;
   stateroomType: string;
   cabinOccupancy: string;
   cabins: ICabinRow[];
   currency: string;
+  pricingType: string;
+  commissionPercentage: number | null;
+  singlePrice: number;
+  doublePrice: number;
+  threeFourthPrice: number;
+  nccf: number;
+  tax: number;
+  grats: number;
 }
 
-// Dropdown Types
-export interface IDestination {
-  id: string;
-  name: string;
-}
-
-export interface IPort {
-  id: string;
-  name: string;
-  destinationId: string;
-}
-
-export interface ICruiseLine {
-  id: string;
-  name: string;
-}
-
-export interface IShip {
-  id: string;
-  name: string;
-  cruiseLineId: string;
-}
-
-// Search + Generic Cruise
-export interface ICruise {
-  id: string;
-  destination: string;
-  departurePort: string;
-  fromDate: string;
-  toDate: string;
-  cruiseLine: string;
-  ship: string;
-  duration: number;
-  price: number;
-}
-
-export interface ICruiseSearchParams {
-  destination?: string;
-  departurePort?: string;
-  from?: string;
-  to?: string;
-  cruiseLine?: string;
-  ship?: string;
-  duration?: number;
-}
+export interface IDestination { destinationCode: string; destinationName: string; }
+export interface IPort { departurePortId: string; departurePortName: string; }
+export interface ICruiseLine { cruiseLineId: string; cruiseLineName: string; }
+export interface IShip { cruiseShipId: string; shipName: string; }
 
 class CruiseService {
-  private route = "/cruise";
+  private route = "/api/CruiseInventories";
 
-  search = (params: ICruiseSearchParams) =>
-    ApiUtility.getResult<ICruise[]>(`${this.route}/search`, params);
-
-  getById = (id: string) =>
-    ApiUtility.getResult<ICruise>(`${this.route}/${id}`);
-
-  create = (data: ICruise) =>
-    ApiUtility.post<IApiResponse<ICruise>>(`${this.route}`, data);
-
-  update = (id: string, data: Partial<ICruise>) =>
-    ApiUtility.post<IApiResponse<ICruise>>(`${this.route}/${id}`, data);
-
-  delete = (id: string) =>
-    ApiUtility.post<IApiResponse<void>>(`${this.route}/${id}/delete`, {});
-
-  // Inventory Management
   getDestinations = () =>
-    ApiUtility.getResult<IDestination[]>(`${this.route}/destinations`);
+    ApiUtility.get<IDestination[]>(`${this.route}/destinations`);
+  getCruiseLine = () =>
+    ApiUtility.get<ICruiseLine[]>(`${this.route}/cruiselines`);
 
   getPorts = (destinationId: string) =>
-    ApiUtility.getResult<IPort[]>(`${this.route}/ports`, { destinationId });
+    ApiUtility.get<IPort[]>(`${this.route}/departures-by-destination/${destinationId}`);
 
-  getCruiseLines = () =>
-    ApiUtility.getResult<ICruiseLine[]>(`${this.route}/cruise-lines`);
+  getCruiseLinesByPort = (departurePortId: string) =>
+    ApiUtility.get<ICruiseLine[]>(`${this.route}/cruise-lines-by-port/${departurePortId}`);
 
   getShips = (cruiseLineId: string) =>
-    ApiUtility.getResult<IShip[]>(`${this.route}/ships`, { cruiseLineId });
+    ApiUtility.get<IShip[]>(`${this.route}/ships-by-cruiseline/${cruiseLineId}`);
 
   saveCruiseInventory = (data: ICruiseInventory) =>
-    ApiUtility.post<IApiResponse<void>>(`${this.route}/inventory`, data);
+    ApiUtility.post<IApiResponse<void>>(`${this.route}/add-cabins`, data);
 }
 
 export default new CruiseService();
