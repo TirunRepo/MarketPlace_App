@@ -9,7 +9,6 @@ import {
   KeyFill,
 } from "react-bootstrap-icons";
 
-import AddInventory from "./components/inventory/AddInventory";
 import Promotion from "./components/promotions/Promotion";
 import AddMarkup from "./components/markup/AddMarkup";
 import Dashboard from "./components/dashboard/Dashboard";
@@ -17,6 +16,7 @@ import CruiseLineManager from "./components/inventory/cruiseLines/CruiseLineMana
 import CruiseShipsManager from "./components/inventory/cruiseShips/CruiseShipsManger";
 import CruiseDeparturePortManager from "./components/inventory/cruiseDeparturesPort/CruiseDeparturePortManager";
 import CruiseDestinationManager from "./components/inventory/cruiseDestination/CruiseDestinatioManager";
+import CruiseInventoryManager from "./components/inventory/CruiseInventoryManager";
 
 // Define roles clearly
 export type UserRole = "Admin" | "Agent";
@@ -45,14 +45,14 @@ export const menuItems: MenuItem[] = [
     icon: <BoxSeam />,
     label: "Inventory",
     roles: ["Agent", "Admin"],
-    element: <AddInventory />,
+    element: <CruiseInventoryManager />,
     children: [
       {
         to: "/inventory/manage-inventory",
         icon: <BoxSeam />,
         label: "Cruise Inventory",
         roles: ["Admin", "Agent"],
-        element: <AddInventory />,
+        element: <CruiseInventoryManager />,
       },
       {
         to: "/inventory/manage-lines",
