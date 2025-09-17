@@ -2,7 +2,7 @@
 import ApiUtility, { type IApiResponse } from "../../../utility/ApiUtility";
 
 export interface CruiseLineDto {
-  cruiseLineId?: string;
+  cruiseLineId?: string | null;
   cruiseLineCode: string;
   cruiseLineName: string;
 }

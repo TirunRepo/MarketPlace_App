@@ -1,4 +1,5 @@
-import { type ReactNode } from "react";
+// menuConfig.tsx
+import { type ReactNode, lazy } from "react";
 import {
   HouseDoorFill,
   BoxSeam,
@@ -7,31 +8,51 @@ import {
   PeopleFill,
   GearFill,
   KeyFill,
+  GeoAlt,
+  JournalCheck,
+  Building,
+  Shop,
 } from "react-bootstrap-icons";
 
-import Promotion from "./components/promotions/Promotion";
-import AddMarkup from "./components/markup/AddMarkup";
-import Dashboard from "./components/dashboard/Dashboard";
-import CruiseLineManager from "./components/inventory/cruiseLines/CruiseLineManager";
-import CruiseShipsManager from "./components/inventory/cruiseShips/CruiseShipsManger";
-import CruiseDeparturePortManager from "./components/inventory/cruiseDeparturesPort/CruiseDeparturePortManager";
-import CruiseDestinationManager from "./components/inventory/cruiseDestination/CruiseDestinatioManager";
-import CruiseInventoryManager from "./components/inventory/CruiseInventoryManager";
+// Lazy load components
+const Dashboard = lazy(() => import("./components/dashboard/Dashboard"));
+const Promotion = lazy(() => import("./components/promotions/Promotion"));
+const AddMarkup = lazy(() => import("./components/markup/AddMarkup"));
+const CruiseLineManager = lazy(() => import("./components/inventory/cruiseLines/CruiseLineManager"));
+const CruiseShipsManager = lazy(() => import("./components/inventory/cruiseShips/CruiseShipsManger"));
+const CruiseDeparturePortManager = lazy(
+  () => import("./components/inventory/cruiseDeparturesPort/CruiseDeparturePortManager")
+);
+const CruiseDestinationManager = lazy(
+  () => import("./components/inventory/cruiseDestination/CruiseDestinatioManager")
+);
+const CruiseInventoryManager = lazy(
+  () => import("./components/inventory/CruiseInventoryManager")
+);
 
-// Define roles clearly
+// Define roles
 export type UserRole = "Admin" | "Agent";
 
-// ✅ Extended MenuItem type with children
+// MenuItem interface
 export interface MenuItem {
   to: string;
   icon: ReactNode;
   label: string;
   roles: UserRole[];
   element: ReactNode;
-  children?: MenuItem[]; // <-- optional nested items
+  children?: MenuItem[];
 }
 
-// ✅ Menu items array with subitems under Inventory
+// Map labels to icons for children
+const childIcons: Record<string, ReactNode> = {
+  "Cruise Inventory": <JournalCheck />,
+  "Manage Lines": <Building />,
+  "Manage Ships": <Shop />,
+  "Manage Destination": <GeoAlt />,
+  "Manage Departure Port": <GeoAlt />,
+};
+
+// Menu items array
 export const menuItems: MenuItem[] = [
   {
     to: "/dashboard",
@@ -44,42 +65,42 @@ export const menuItems: MenuItem[] = [
     to: "/inventory",
     icon: <BoxSeam />,
     label: "Inventory",
-    roles: ["Agent", "Admin"],
+    roles: ["Admin", "Agent"], // parent access can remain broad
     element: <CruiseInventoryManager />,
     children: [
       {
         to: "/inventory/manage-inventory",
-        icon: <BoxSeam />,
+        icon: childIcons["Cruise Inventory"],
         label: "Cruise Inventory",
-        roles: ["Admin", "Agent"],
+        roles: ["Agent"], // child-specific role
         element: <CruiseInventoryManager />,
       },
       {
         to: "/inventory/manage-lines",
-        icon: <BoxSeam />,
+        icon: childIcons["Manage Lines"],
         label: "Manage Lines",
-        roles: ["Admin", "Agent"],
+        roles: ["Admin"],
         element: <CruiseLineManager />,
       },
       {
         to: "/inventory/manage-ships",
-        icon: <BoxSeam />,
+        icon: childIcons["Manage Ships"],
         label: "Manage Ships",
-        roles: ["Admin", "Agent"],
+        roles: ["Admin"],
         element: <CruiseShipsManager />,
       },
       {
         to: "/inventory/manage-destination",
-        icon: <BoxSeam />,
+        icon: childIcons["Manage Destination"],
         label: "Manage Destination",
-        roles: ["Admin", "Agent"],
+        roles: ["Admin"],
         element: <CruiseDestinationManager />,
       },
       {
         to: "/inventory/manage-departure-port",
-        icon: <BoxSeam />,
+        icon: childIcons["Manage Departure Port"],
         label: "Manage Departure Port",
-        roles: ["Admin", "Agent"],
+        roles: ["Admin"],
         element: <CruiseDeparturePortManager />,
       },
     ],

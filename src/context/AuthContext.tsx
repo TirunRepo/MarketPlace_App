@@ -38,7 +38,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const res = await AuthService.check();
       setUser(res);
-      debugger
       return res;
     } catch {
       setUser(null);
@@ -49,15 +48,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // ✅ login now returns the fresh user
   const login = async (userName: string, password: string): Promise<IAuthUser> => {
     await AuthService.login({ userName, password });
-    debugger
     const res = await checkAuth();
-    debugger
     if (!res) throw new Error("Login failed");
+    else window.location.href = "/dashboard";
     return res;
   };
 
   const logout = async () => {
     await AuthService.logout();
+    window.location.href = "/login";
     setUser(null);
   };
 

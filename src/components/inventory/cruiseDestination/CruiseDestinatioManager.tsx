@@ -1,149 +1,203 @@
-import React, { useEffect, useState } from "react";
-import { Card, Table, Button, Pagination, Col, Row } from "react-bootstrap";
-import CruiseDestinationService, { type DestinationDto } from "../../Services/cruiseDestination/CruiseDestinationService";
+import React, { useEffect, useState, useCallback } from "react";
+import { Card, Table, Button, Col, Row } from "react-bootstrap";
+import CruiseDestinationService, {
+  type DestinationDto,
+} from "../../Services/cruiseDestination/CruiseDestinationService";
 import EditCruiseDestination from "./EditCruiseDestination";
+import CustomPagination from "../../../common/CustomPagination";
+import LoadingOverlay from "../../../common/LoadingOverlay";
+import { useToast } from "../../../common/Toaster";
+import ConfirmationModal from "../../../common/ConfirmationModal";
 
-const pageSize = 5; // items per page
+const DEFAULT_PAGE_SIZE = 5;
 
 const CruiseDestinationManager: React.FC = () => {
-    const [destinations, setDestinations] = useState<DestinationDto[]>([]);
-    const [currentPage, setCurrentPage] = useState(1);
-    const [totalPages, setTotalPages] = useState(1);
+  const [destinations, setDestinations] = useState<DestinationDto[]>([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
 
-    const [modalShow, setModalShow] = useState(false);
-    const [selectedDestination, setSelectedDestination] = useState<DestinationDto>({
-        destinationCode: "",
-        destinationName: "",
-    });
+  const [loading, setLoading] = useState(false);
+  const [modalVisible, setModalVisible] = useState(false);
+  const [selectedDestination, setSelectedDestination] = useState<DestinationDto>({
+    destinationCode: "",
+    destinationName: "",
+  });
 
-    // Fetch destinations with pagination
-    const fetchDestinations = async (page = currentPage) => {
-        try {
-            const data = await CruiseDestinationService.getAll(page, pageSize); // API should support page & pageSize
-            setDestinations(data.data.items || []);
-            setCurrentPage(data.data.currentPage || 1);
-            setTotalPages(data.data.totalPages || 1);
-        } catch (error) {
-            console.error("Failed to fetch destinations:", error);
-        }
-    };
+  const [deleteModalVisible, setDeleteModalVisible] = useState(false);
+  const [destinationToDelete, setDestinationToDelete] = useState<string | null>(
+    null
+  );
 
-    useEffect(() => {
-        fetchDestinations();
-    }, [currentPage]);
+  const { showToast } = useToast();
 
-    // Open modal for add
-    const handleAdd = () => {
-        setSelectedDestination({ destinationCode: "", destinationName: "" });
-        setModalShow(true);
-    };
+  // Fetch destinations
+  const fetchDestinations = useCallback(
+    async (page = currentPage, size = pageSize) => {
+      setLoading(true);
+      try {
+        const response = await CruiseDestinationService.getAll(page, size);
+        const data = response.data;
+        setDestinations(data.items || []);
+        setCurrentPage(data.currentPage || 1);
+        setTotalPages(data.totalPages || 1);
+      } catch (error) {
+        console.error("Failed to fetch destinations:", error);
+        showToast("Failed to fetch destinations", "error");
+      } finally {
+        setLoading(false);
+      }
+    },
+    [currentPage, pageSize, showToast]
+  );
 
-    // Open modal for edit
-    const handleEdit = (destination: DestinationDto) => {
-        setSelectedDestination(destination);
-        setModalShow(true);
-    };
+  useEffect(() => {
+    fetchDestinations(currentPage, pageSize);
+  }, [currentPage, pageSize, fetchDestinations]);
 
-    // Delete destination
-    const handleDelete = async (code: string) => {
-        if (!window.confirm("Are you sure you want to delete this destination?")) return;
-        try {
-            await CruiseDestinationService.delete(code);
-            fetchDestinations();
-        } catch (error) {
-            console.error("Failed to delete destination:", error);
-        }
-    };
+  // Add Destination
+  const handleAdd = () => {
+    setSelectedDestination({ destinationCode: "", destinationName: "" });
+    setModalVisible(true);
+  };
 
-    // Save destination (add or update)
-    const handleSave = async () => {
-        try {
-            if (selectedDestination.destinationCode) {
-                await CruiseDestinationService.update(selectedDestination);
-            } else {
-                await CruiseDestinationService.add(selectedDestination);
-            }
-            setModalShow(false);
-            fetchDestinations();
-        } catch (error) {
-            console.error("Failed to save destination:", error);
-        }
-    };
+  // Edit Destination
+  const handleEdit = (destination: DestinationDto) => {
+    setSelectedDestination(destination);
+    setModalVisible(true);
+  };
 
-    // Render pagination
-    const renderPagination = () => {
-        if (totalPages <= 1) return null;
+  // Delete Destination
+  const handleDelete = (code: string) => {
+    setDestinationToDelete(code);
+    setDeleteModalVisible(true);
+  };
 
-        const pageNeighbors = 2;
-        const pages: (number | string)[] = [];
+  const handleDeleteConfirm = async () => {
+    if (!destinationToDelete) return;
+    setLoading(true);
+    try {
+      await CruiseDestinationService.delete(destinationToDelete);
+      showToast("Destination deleted successfully", "success");
+      fetchDestinations(1, pageSize); // reset to first page after delete
+    } catch (error) {
+      console.error("Failed to delete destination:", error);
+      showToast("Failed to delete destination", "error");
+    } finally {
+      setLoading(false);
+      setDeleteModalVisible(false);
+      setDestinationToDelete(null);
+    }
+  };
 
-        if (currentPage > 1 + pageNeighbors + 1) pages.push(1, "...");
-        else for (let i = 1; i < currentPage; i++) pages.push(i);
+  // Save Destination
+  const handleSave = async (destination: DestinationDto) => {
+    setLoading(true);
+    try {
+      if (destination.destinationCode) {
+        await CruiseDestinationService.update(destination);
+        showToast("Destination updated successfully", "success");
+      } else {
+        await CruiseDestinationService.add(destination);
+        showToast("Destination added successfully", "success");
+      }
+      setModalVisible(false);
+      fetchDestinations(1, pageSize); // reset to first page after save
+    } catch (error) {
+      console.error("Failed to save destination:", error);
+      showToast("Failed to save destination", "error");
+    } finally {
+      setLoading(false);
+    }
+  };
 
-        for (let i = Math.max(1, currentPage - pageNeighbors); i <= Math.min(totalPages, currentPage + pageNeighbors); i++) pages.push(i);
+  return (
+    <div className="mt-4">
+      <LoadingOverlay show={loading} />
 
-        if (currentPage < totalPages - pageNeighbors - 1) pages.push("...", totalPages);
-        else for (let i = currentPage + 1; i <= totalPages; i++) pages.push(i);
+      <Row className="mb-3">
+        <Col xs={12} md={3}>
+          <Button variant="primary" onClick={handleAdd}>
+            Add Destination
+          </Button>
+        </Col>
+      </Row>
 
-        return (
-            <Pagination className="justify-content-center mt-3">
-                <Pagination.Prev onClick={() => currentPage > 1 && setCurrentPage(currentPage - 1)} disabled={currentPage === 1} />
-                {pages.map((page, idx) =>
-                    typeof page === "number" ? (
-                        <Pagination.Item key={idx} active={page === currentPage} onClick={() => setCurrentPage(page)}>
-                            {page}
-                        </Pagination.Item>
-                    ) : (
-                        <Pagination.Ellipsis key={idx} disabled />
-                    )
+      <Row>
+        <Col xs={12}>
+          <Card className="p-4 shadow-sm">
+            <Table hover responsive striped bordered className="align-middle">
+              <thead className="table-light">
+                <tr>
+                  <th>Destination Name</th>
+                  <th>Destination Code</th>
+                  <th className="text-center">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {destinations.length > 0 ? (
+                  destinations.map((d) => (
+                    <tr key={d.destinationCode}>
+                      <td>{d.destinationName}</td>
+                      <td>{d.destinationCode}</td>
+                      <td className="text-center d-flex justify-content-center gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline-primary"
+                          onClick={() => handleEdit(d)}
+                        >
+                          Edit
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline-danger"
+                          onClick={() => handleDelete(d.destinationCode)}
+                        >
+                          Delete
+                        </Button>
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan={3} className="text-center text-muted">
+                      No destinations found
+                    </td>
+                  </tr>
                 )}
-                <Pagination.Next onClick={() => currentPage < totalPages && setCurrentPage(currentPage + 1)} disabled={currentPage === totalPages} />
-            </Pagination>
-        );
-    };
+              </tbody>
+            </Table>
 
-    return (
-        <div className="mt-4">
-            {/* Add Button at top */}
-            <Row className="mb-3">
-                <Col xs={12} md={3}>
-                    <Button variant="primary" onClick={handleAdd}>Add Destination</Button>
-                </Col>
-            </Row>
-            <Row>
-                <Col xs={12}>
-                    <Card className="p-4 shadow-sm">
+            <CustomPagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={setCurrentPage}
+              pageSize={pageSize}
+              onPageSizeChange={(size) => {
+                setPageSize(size);
+                setCurrentPage(1);
+              }}
+            />
+          </Card>
+        </Col>
+      </Row>
 
-                        {/* Table */}
-                        <Table hover responsive striped bordered className="align-middle">
-                            <thead className="table-light">
-                                <tr>
-                                    <th>Destination Name</th>
-                                    <th>Destination Code</th>
-                                    <th>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {destinations.map(d => (
-                                    <tr key={d.destinationCode}>
-                                        <td>{d.destinationName}</td>
-                                        <td>{d.destinationCode}</td>
-                                        <td style={{ display: "flex", gap: "10px" }}>
-                                            <Button size="sm" variant="outline-primary" className="me-2" onClick={() => handleEdit(d)}>Edit</Button>
-                                            <Button size="sm" variant="outline-danger" onClick={() => handleDelete(d.destinationCode)}>Delete</Button>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </Table>
+      <EditCruiseDestination
+        show={modalVisible}
+        onHide={() => setModalVisible(false)}
+        onSave={handleSave}
+        destination={selectedDestination}
+      />
 
-                        {renderPagination()}
-                    </Card>
-                </Col>
-            </Row>
-            <EditCruiseDestination show={modalShow} onHide={() => setModalShow(false)} onSave={handleSave} />
-        </div>
-    );
+      <ConfirmationModal
+        show={deleteModalVisible}
+        title="Delete Destination"
+        message="Are you sure you want to delete this destination?"
+        onConfirm={handleDeleteConfirm}
+        onCancel={() => setDeleteModalVisible(false)}
+      />
+    </div>
+  );
 };
 
 export default CruiseDestinationManager;

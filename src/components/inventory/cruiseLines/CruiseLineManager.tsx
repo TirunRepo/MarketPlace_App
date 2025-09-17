@@ -1,174 +1,203 @@
-import React, { useState, useEffect } from "react";
-import { Table, Button, Pagination, Card, Row, Col } from "react-bootstrap";
+import React, { useState, useEffect, useCallback } from "react";
+import { Table, Button, Card, Row, Col } from "react-bootstrap";
 import EditLineModal from "./EditLine";
 import CruiseLineService, { type CruiseLineDto } from "../../Services/cruiseLines/CruiseLinesServices";
+import CustomPagination from "../../../common/CustomPagination";
+import LoadingOverlay from "../../../common/LoadingOverlay";
+import { useToast } from "../../../common/Toaster";
+import ConfirmationModal from "../../../common/ConfirmationModal";
+
+const DEFAULT_PAGE_SIZE = 5;
 
 const CruiseLineManager: React.FC = () => {
-    const [lines, setLines] = useState<CruiseLineDto[]>([]);
-    const [modalShow, setModalShow] = useState(false);
-    const [selectedLine, setSelectedLine] = useState<CruiseLineDto>({
-        cruiseLineId: "",
-        cruiseLineCode: "",
-        cruiseLineName: "",
-    });
+  const [lines, setLines] = useState<CruiseLineDto[]>([]);
+  const [selectedLine, setSelectedLine] = useState<CruiseLineDto>({
+    cruiseLineId: "",
+    cruiseLineCode: "",
+    cruiseLineName: "",
+  });
 
-    const [currentPage, setCurrentPage] = useState(1);
-    const [totalPages, setTotalPages] = useState(1);
-    const pageSize = 5;
+  const [modalVisible, setModalVisible] = useState(false);
+  const [deleteModalVisible, setDeleteModalVisible] = useState(false);
+  const [lineToDelete, setLineToDelete] = useState<string | null>(null);
 
-    const fetchLines = async (page: number = currentPage) => {
-        try {
-            const data = await CruiseLineService.getCruiseLines(page, pageSize);
-            setLines(data.data.items);
-            setCurrentPage(data.data.currentPage);
-            setTotalPages(data.data.totalPages);
-        } catch (error) {
-            console.error("Error fetching cruise lines", error);
-        }
-    };
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
 
-    useEffect(() => {
-        fetchLines();
-    }, [currentPage]);
+  const [loading, setLoading] = useState(false);
+  const { showToast } = useToast();
 
-    const handleEdit = (line: CruiseLineDto) => {
-        setSelectedLine(line);
-        setModalShow(true);
-    };
+  // Fetch cruise lines
+  const fetchLines = useCallback(
+    async (page = currentPage, size = pageSize) => {
+      setLoading(true);
+      try {
+        const data = await CruiseLineService.getCruiseLines(page, size);
+        setLines(data.data.items || []);
+        setCurrentPage(data.data.currentPage || 1);
+        setTotalPages(data.data.totalPages || 1);
+      } catch (error) {
+        console.error("Error fetching cruise lines", error);
+        showToast("Failed to fetch cruise lines", "error");
+      } finally {
+        setLoading(false);
+      }
+    },
+    [currentPage, pageSize, showToast]
+  );
 
-    const handleAdd = () => {
-        setSelectedLine({ cruiseLineId: "", cruiseLineCode: "", cruiseLineName: "" });
-        setModalShow(true);
-    };
+  useEffect(() => {
+    fetchLines(currentPage, pageSize);
+  }, [currentPage, pageSize, fetchLines]);
 
-    const handleDelete = async (id?: string) => {
-        if (!id) return;
-        if (!window.confirm("Are you sure you want to delete this line?")) return;
+  // Add
+  const handleAdd = () => {
+    setSelectedLine({ cruiseLineId: "", cruiseLineCode: "", cruiseLineName: "" });
+    setModalVisible(true);
+  };
 
-        try {
-            await CruiseLineService.deleteCruiseLine(id);
-            alert("Line deleted successfully");
-            fetchLines();
-        } catch (error) {
-            console.error(error);
-            alert("Error deleting line");
-        }
-    };
+  // Edit
+  const handleEdit = (line: CruiseLineDto) => {
+    setSelectedLine(line);
+    setModalVisible(true);
+  };
 
-    const handleSave = async (lineData: CruiseLineDto) => {
-        try {
-            if (lineData.cruiseLineId) {
-                await CruiseLineService.updateCruiseLine(lineData);
-            } else {
-                await CruiseLineService.addCruiseLine(lineData);
-            }
-            alert("Line saved successfully");
-            setModalShow(false);
-            fetchLines();
-        } catch (error) {
-            console.error(error);
-            alert("Error saving line");
-        }
-    };
+  // Delete
+  const handleDelete = (id: string) => {
+    setLineToDelete(id);
+    setDeleteModalVisible(true);
+  };
 
-    // Dynamic pagination
-    const renderPagination = () => {
-        if (totalPages <= 1) return null;
+  const handleDeleteConfirm = async () => {
+    if (!lineToDelete) return;
+    setLoading(true);
+    try {
+      await CruiseLineService.deleteCruiseLine(lineToDelete);
+      showToast("Cruise line deleted successfully", "success");
+      fetchLines(1, pageSize); // reset to first page after delete
+    } catch (error) {
+      console.error("Error deleting cruise line", error);
+      showToast("Failed to delete cruise line", "error");
+    } finally {
+      setLoading(false);
+      setDeleteModalVisible(false);
+      setLineToDelete(null);
+    }
+  };
 
-        const pageNeighbors = 2;
-        const pages: (number | string)[] = [];
+  // Save
+  const handleSave = async (lineData: CruiseLineDto) => {
+    setLoading(true);
+    try {
+      if (lineData.cruiseLineId) {
+        await CruiseLineService.updateCruiseLine(lineData);
+        showToast("Cruise line updated successfully", "success");
+      } else {
+        await CruiseLineService.addCruiseLine(lineData);
+        showToast("Cruise line added successfully", "success");
+      }
+      setModalVisible(false);
+      fetchLines(1, pageSize); // reset to first page after save
+    } catch (error) {
+      console.error("Error saving cruise line", error);
+      showToast("Failed to save cruise line", "error");
+    } finally {
+      setLoading(false);
+    }
+  };
 
-        if (currentPage > 1 + pageNeighbors + 1) {
-            pages.push(1, "...");
-        } else {
-            for (let i = 1; i < currentPage; i++) pages.push(i);
-        }
+  return (
+    <div className="mt-4">
+      <LoadingOverlay show={loading} />
 
-        for (let i = Math.max(1, currentPage - pageNeighbors); i <= Math.min(totalPages, currentPage + pageNeighbors); i++) {
-            pages.push(i);
-        }
+      {/* Add Button */}
+      <Row className="mb-3">
+        <Col xs={12} md={3}>
+          <Button variant="primary" onClick={handleAdd} className="w-100">
+            Add Cruise Line
+          </Button>
+        </Col>
+      </Row>
 
-        if (currentPage < totalPages - pageNeighbors - 1) {
-            pages.push("...", totalPages);
-        } else {
-            for (let i = currentPage + 1; i <= totalPages; i++) pages.push(i);
-        }
-
-        return (
-            <Pagination className="justify-content-center mt-3">
-                <Pagination.Prev onClick={() => currentPage > 1 && setCurrentPage(currentPage - 1)} disabled={currentPage === 1} />
-                {pages.map((page, idx) =>
-                    typeof page === "number" ? (
-                        <Pagination.Item key={idx} active={page === currentPage} onClick={() => setCurrentPage(page)}>
-                            {page}
-                        </Pagination.Item>
-                    ) : (
-                        <Pagination.Ellipsis key={idx} disabled />
-                    )
+      {/* Table */}
+      <Row>
+        <Col xs={12}>
+          <Card className="p-4 shadow-sm">
+            <h4 className="mb-4">Cruise Lines</h4>
+            <Table hover responsive striped bordered className="align-middle">
+              <thead className="table-light">
+                <tr>
+                  <th>Code</th>
+                  <th>Name</th>
+                  <th className="text-center">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {lines.length > 0 ? (
+                  lines.map((line) => (
+                    <tr key={line.cruiseLineId}>
+                      <td>{line.cruiseLineCode}</td>
+                      <td>{line.cruiseLineName}</td>
+                      <td className="text-center d-flex justify-content-center gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline-primary"
+                          onClick={() => handleEdit(line)}
+                        >
+                          Edit
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline-danger"
+                          onClick={() => handleDelete(line.cruiseLineId!)}
+                        >
+                          Delete
+                        </Button>
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan={3} className="text-center text-muted">
+                      No cruise lines found
+                    </td>
+                  </tr>
                 )}
-                <Pagination.Next onClick={() => currentPage < totalPages && setCurrentPage(currentPage + 1)} disabled={currentPage === totalPages} />
-            </Pagination>
-        );
-    };
+              </tbody>
+            </Table>
 
-    return (
-        <div className="mt-4">
-            {/* Add Button at top */}
-            <Row className="mb-3">
-                <Col xs={12} md={3}>
-                    <Button variant="primary" onClick={handleAdd} className="w-80">
-                        Add Cruise Line
-                    </Button>
-                </Col>
-            </Row>
+            <CustomPagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={setCurrentPage}
+              pageSize={pageSize}
+              onPageSizeChange={(size) => {
+                setPageSize(size);
+                setCurrentPage(1);
+              }}
+            />
+          </Card>
+        </Col>
+      </Row>
 
-            {/* Table below */}
-            <Row>
-                <Col xs={12}>
-                    <Card className="p-4 shadow-sm">
-                        <h4 className="mb-4">Cruise Lines</h4>
-                        <Table hover responsive striped bordered className="align-middle">
-                            <thead className="table-light">
-                                <tr>
-                                    <th>Code</th>
-                                    <th>Name</th>
-                                    <th className="text-center">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {lines.length ? (
-                                    lines.map((line) => (
-                                        <tr key={line.cruiseLineId}>
-                                            <td>{line.cruiseLineCode}</td>
-                                            <td>{line.cruiseLineName}</td>
-                                            <td className="text-center">
-                                                <Button size="sm" variant="outline-primary" className="me-2" onClick={() => handleEdit(line)}>
-                                                    Edit
-                                                </Button>
-                                                <Button size="sm" variant="outline-danger" onClick={() => handleDelete(line.cruiseLineId)}>
-                                                    Delete
-                                                </Button>
-                                            </td>
-                                        </tr>
-                                    ))
-                                ) : (
-                                    <tr>
-                                        <td colSpan={3} className="text-center text-muted">
-                                            No cruise lines found
-                                        </td>
-                                    </tr>
-                                )}
-                            </tbody>
-                        </Table>
-                        {renderPagination()}
-                    </Card>
-                </Col>
-            </Row>
+      {/* Modals */}
+      <EditLineModal
+        show={modalVisible}
+        onHide={() => setModalVisible(false)}
+        lineData={selectedLine}
+        onSave={handleSave}
+      />
 
-            {/* Modal */}
-            <EditLineModal show={modalShow} onHide={() => setModalShow(false)} lineData={selectedLine} onSave={handleSave} />
-        </div>
-    );
+      <ConfirmationModal
+        show={deleteModalVisible}
+        title="Delete Cruise Line"
+        message="Are you sure you want to delete this cruise line?"
+        onConfirm={handleDeleteConfirm}
+        onCancel={() => setDeleteModalVisible(false)}
+      />
+    </div>
+  );
 };
 
 export default CruiseLineManager;

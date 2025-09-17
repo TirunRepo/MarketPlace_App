@@ -1,103 +1,90 @@
 import React, { useEffect, useState } from "react";
-import { Row, Col, Button, Card, Table, Pagination } from "react-bootstrap";
+import { Row, Col, Button, Card, Table } from "react-bootstrap";
 import EditInventory from "./EditInventory";
 import CruiseService, { type ICruiseInventory } from "../Services/CruiseService";
 import ApiUtility, { type IApiResponse } from "../../utility/ApiUtility";
 import type { IPagedData } from "../../common/IPagedData";
+import CustomPagination from "../../common/CustomPagination";
+import LoadingOverlay from "../../common/LoadingOverlay";
+import { useToast } from "../../common/Toaster";
+import ConfirmationModal from "../../common/ConfirmationModal";
 
 const CruiseInventoryManager: React.FC = () => {
   const [inventories, setInventories] = useState<ICruiseInventory[]>([]);
-  const [modalShow, setModalShow] = useState(false);
   const [selectedInventory, setSelectedInventory] = useState<ICruiseInventory | null>(null);
+  const [modalShow, setModalShow] = useState(false);
 
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const pageSize = 5;
+  const [pageSize, setPageSize] = useState(5);
+  const [loading, setLoading] = useState(false);
 
-  // Assume role comes from auth (hardcoded here for demo)
+  const [deleteModal, setDeleteModal] = useState(false);
+  const [inventoryToDelete, setInventoryToDelete] = useState<string | number | null>(null);
+
   const role: "Admin" | "Agent" = "Admin";
+  const { showToast } = useToast();
 
-  const fetchInventories = async (page = 1) => {
+  // Fetch inventories
+  const fetchInventories = async (page = currentPage, size = pageSize) => {
+    setLoading(true);
     try {
-      const data = await ApiUtility.get<IApiResponse<IPagedData<any>>>(
-        `/api/CruiseInventories?page=${page}&pageSize=${pageSize}`
+      const res = await ApiUtility.get<IApiResponse<IPagedData<ICruiseInventory>>>(
+        `/api/CruiseInventories?page=${page}&pageSize=${size}`
       );
-      const paged = data.data.data;
+      const paged = res.data.data;
       setInventories(paged.items || []);
       setCurrentPage(paged.currentPage || 1);
       setTotalPages(paged.totalPages || 1);
-    } catch (error) {
-      console.error("fetchInventories error", error);
+    } catch (err) {
+      console.error("Error fetching inventories:", err);
+      showToast("Failed to fetch inventories", "error");
+    } finally {
+      setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchInventories(currentPage);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentPage]);
+    fetchInventories(currentPage, pageSize);
+  }, [currentPage, pageSize]);
 
+  // Save inventory
   const handleSave = async (inventory: ICruiseInventory) => {
+    setLoading(true);
     try {
       await CruiseService.saveCruiseInventory(inventory);
+      showToast("Inventory saved successfully", "success");
       setModalShow(false);
-      fetchInventories(currentPage);
-    } catch (error) {
-      console.error(error);
-      alert("Error saving inventory");
+      fetchInventories(currentPage, pageSize);
+    } catch (err) {
+      console.error("Error saving inventory:", err);
+      showToast("Error saving inventory", "error");
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleDelete = async (id?: string | number) => {
-    if (!id) return;
-    if (!window.confirm("Are you sure you want to delete this inventory?")) return;
+  // Delete inventory
+  const handleDeleteConfirm = async () => {
+    if (!inventoryToDelete) return;
+    setLoading(true);
     try {
-      await ApiUtility.delete(`${"/api/CruiseInventories"}/${id}`);
-      fetchInventories(currentPage);
-    } catch (error) {
-      console.error(error);
-      alert("Error deleting inventory");
+      await ApiUtility.delete(`/api/CruiseInventories/${inventoryToDelete}`);
+      showToast("Inventory deleted successfully", "success");
+      fetchInventories(currentPage, pageSize);
+    } catch (err) {
+      console.error("Error deleting inventory:", err);
+      showToast("Error deleting inventory", "error");
+    } finally {
+      setLoading(false);
+      setDeleteModal(false);
+      setInventoryToDelete(null);
     }
   };
 
-  const renderPagination = () => {
-    if (totalPages <= 1) return null;
-    const pageNeighbors = 2;
-    const pages: (number | string)[] = [];
-
-    if (currentPage > pageNeighbors + 2) pages.push(1, "...");
-    for (
-      let i = Math.max(1, currentPage - pageNeighbors);
-      i <= Math.min(totalPages, currentPage + pageNeighbors);
-      i++
-    )
-      pages.push(i);
-    if (currentPage < totalPages - pageNeighbors - 1) pages.push("...", totalPages);
-
-    return (
-      <Pagination className="justify-content-center mt-3">
-        <Pagination.Prev
-          onClick={() => currentPage > 1 && setCurrentPage(currentPage - 1)}
-          disabled={currentPage === 1}
-        />
-        {pages.map((page, idx) =>
-          typeof page === "number" ? (
-            <Pagination.Item
-              key={idx}
-              active={page === currentPage}
-              onClick={() => setCurrentPage(page)}
-            >
-              {page}
-            </Pagination.Item>
-          ) : (
-            <Pagination.Ellipsis key={idx} disabled />
-          )
-        )}
-        <Pagination.Next
-          onClick={() => currentPage < totalPages && setCurrentPage(currentPage + 1)}
-          disabled={currentPage === totalPages}
-        />
-      </Pagination>
-    );
+  const handleDelete = (id: string | number) => {
+    setInventoryToDelete(id);
+    setDeleteModal(true);
   };
 
   const emptyInventory = (): ICruiseInventory => ({
@@ -132,6 +119,9 @@ const CruiseInventoryManager: React.FC = () => {
 
   return (
     <div className="mt-4">
+      <LoadingOverlay show={loading} />
+
+      {/* Add Inventory Button */}
       <Row className="mb-3">
         <Col xs={12} md={3}>
           <Button
@@ -147,6 +137,7 @@ const CruiseInventoryManager: React.FC = () => {
         </Col>
       </Row>
 
+      {/* Inventory Table */}
       <Row>
         <Col xs={12}>
           <Card className="p-4 shadow-sm">
@@ -165,8 +156,8 @@ const CruiseInventoryManager: React.FC = () => {
               </thead>
               <tbody>
                 {inventories.length ? (
-                  inventories.map((inv: any) => (
-                    <tr key={inv.cruiseInventoryId ?? inv.id ?? JSON.stringify(inv)}>
+                  inventories.map((inv) => (
+                    <tr key={inv.cruiseInventoryId ?? JSON.stringify(inv)}>
                       <td>{inv.cruiseInventoryId ?? "-"}</td>
                       <td>{inv.departurePort ?? "-"}</td>
                       <td>{inv.destination ?? "-"}</td>
@@ -187,9 +178,7 @@ const CruiseInventoryManager: React.FC = () => {
                         <Button
                           size="sm"
                           variant="outline-danger"
-                          onClick={() =>
-                            inv.cruiseInventoryId && handleDelete(inv.cruiseInventoryId)
-                          }
+                          onClick={() => inv.cruiseInventoryId && handleDelete(inv.cruiseInventoryId)}
                         >
                           Delete
                         </Button>
@@ -205,12 +194,23 @@ const CruiseInventoryManager: React.FC = () => {
                 )}
               </tbody>
             </Table>
-            {renderPagination()}
+
+            <CustomPagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={setCurrentPage}
+              pageSize={pageSize}
+              onPageSizeChange={(size) => {
+                setPageSize(size);
+                setCurrentPage(1);
+              }}
+            />
           </Card>
         </Col>
       </Row>
 
-      {selectedInventory !== null && (
+      {/* Edit Inventory Modal */}
+      {selectedInventory && (
         <EditInventory
           show={modalShow}
           onHide={() => setModalShow(false)}
@@ -219,6 +219,15 @@ const CruiseInventoryManager: React.FC = () => {
           role={role}
         />
       )}
+
+      {/* Delete Confirmation Modal */}
+      <ConfirmationModal
+        show={deleteModal}
+        title="Delete Inventory"
+        message="Are you sure you want to delete this inventory?"
+        onConfirm={handleDeleteConfirm}
+        onCancel={() => setDeleteModal(false)}
+      />
     </div>
   );
 };
