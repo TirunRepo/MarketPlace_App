@@ -14,11 +14,15 @@ const CruiseInventoryManager: React.FC = () => {
   const [totalPages, setTotalPages] = useState(1);
   const pageSize = 5;
 
+  // Assume role comes from auth (hardcoded here for demo)
+  const role: "Admin" | "Agent" = "Admin";
+
   const fetchInventories = async (page = 1) => {
     try {
-      const data = await ApiUtility.get<IApiResponse<IPagedData<any>>>(`/api/CruiseInventories?page=${page}&pageSize=${pageSize}`);
+      const data = await ApiUtility.get<IApiResponse<IPagedData<any>>>(
+        `/api/CruiseInventories?page=${page}&pageSize=${pageSize}`
+      );
       const paged = data.data.data;
-      debugger
       setInventories(paged.items || []);
       setCurrentPage(paged.currentPage || 1);
       setTotalPages(paged.totalPages || 1);
@@ -36,7 +40,6 @@ const CruiseInventoryManager: React.FC = () => {
     try {
       await CruiseService.saveCruiseInventory(inventory);
       setModalShow(false);
-      // refresh first page (or maintain current page)
       fetchInventories(currentPage);
     } catch (error) {
       console.error(error);
@@ -66,22 +69,33 @@ const CruiseInventoryManager: React.FC = () => {
       let i = Math.max(1, currentPage - pageNeighbors);
       i <= Math.min(totalPages, currentPage + pageNeighbors);
       i++
-    ) pages.push(i);
+    )
+      pages.push(i);
     if (currentPage < totalPages - pageNeighbors - 1) pages.push("...", totalPages);
 
     return (
       <Pagination className="justify-content-center mt-3">
-        <Pagination.Prev onClick={() => currentPage > 1 && setCurrentPage(currentPage - 1)} disabled={currentPage === 1} />
+        <Pagination.Prev
+          onClick={() => currentPage > 1 && setCurrentPage(currentPage - 1)}
+          disabled={currentPage === 1}
+        />
         {pages.map((page, idx) =>
           typeof page === "number" ? (
-            <Pagination.Item key={idx} active={page === currentPage} onClick={() => setCurrentPage(page)}>
+            <Pagination.Item
+              key={idx}
+              active={page === currentPage}
+              onClick={() => setCurrentPage(page)}
+            >
               {page}
             </Pagination.Item>
           ) : (
             <Pagination.Ellipsis key={idx} disabled />
           )
         )}
-        <Pagination.Next onClick={() => currentPage < totalPages && setCurrentPage(currentPage + 1)} disabled={currentPage === totalPages} />
+        <Pagination.Next
+          onClick={() => currentPage < totalPages && setCurrentPage(currentPage + 1)}
+          disabled={currentPage === totalPages}
+        />
       </Pagination>
     );
   };
@@ -173,7 +187,9 @@ const CruiseInventoryManager: React.FC = () => {
                         <Button
                           size="sm"
                           variant="outline-danger"
-                          onClick={() => inv.cruiseInventoryId && handleDelete(inv.cruiseInventoryId)}
+                          onClick={() =>
+                            inv.cruiseInventoryId && handleDelete(inv.cruiseInventoryId)
+                          }
                         >
                           Delete
                         </Button>
@@ -200,6 +216,7 @@ const CruiseInventoryManager: React.FC = () => {
           onHide={() => setModalShow(false)}
           inventoryData={selectedInventory}
           onSave={handleSave}
+          role={role}
         />
       )}
     </div>
