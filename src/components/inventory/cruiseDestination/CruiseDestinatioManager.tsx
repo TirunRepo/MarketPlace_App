@@ -48,7 +48,7 @@ const CruiseDestinationManager: React.FC = () => {
         setLoading(false);
       }
     },
-    [currentPage, pageSize, showToast]
+    [currentPage, pageSize]
   );
 
   useEffect(() => {

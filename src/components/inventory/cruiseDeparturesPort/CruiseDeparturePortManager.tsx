@@ -46,7 +46,7 @@ const CruiseDeparturePortManager: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [currentPage, pageSize, showToast]);
+  }, [currentPage, pageSize]);
 
   // Fetch destinations
   const fetchDestinations = useCallback(async () => {
@@ -60,7 +60,7 @@ const CruiseDeparturePortManager: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [showToast]);
+  }, []);
 
   useEffect(() => {
     fetchPorts();

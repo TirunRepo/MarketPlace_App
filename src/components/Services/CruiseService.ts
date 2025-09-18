@@ -1,30 +1,47 @@
 import ApiUtility, { type IApiResponse } from "../../utility/ApiUtility";
 
+// ----------------------------
 // Frontend models
+// ----------------------------
+export interface ICabinDetails {
+  cabinNo: string;
+  cabinType: "GTY" | "Manual";
+  cabinOccupancy: "Available" | "Occupied";
+  singleRate?: number | null;
+  doubleRate?: number | null;
+  tripleRate?: number | null;
+  nccf?: number | null;
+  tax?: number | null;
+  grats?: number | null;
+}
+
 export interface ICruiseInventory {
-  cruiseInventoryId?: number | string | undefined;
+  id?: number | null;
   sailDate: string;
   groupId: string;
-  nights: string | number;
+  nights: string;
   packageName: string;
-  destination: string;   // destination code
-  departurePort: string; // departure port id
-  cruiseShip?: ICruiseShip | undefined;
+  destinationId: string;       // ✅ consistent: destinationId
+  departurePortId: string;     // ✅ consistent: departurePortId
+  cruiseLineId: number;
+  shipId: number;
+  shipCode: string;
   categoryId: string;
-  stateroomType: string;
+  stateroom: string;
   cabinOccupancy: string;
-  cabins: ICabinRow[];
-  currency: string;
-  pricingType: string;
+  pricingType: "Net" | "Commissionable" | "";
   commissionPercentage: number | null;
-  singlePrice: number;
-  doublePrice: number;
-  threeFourthPrice: number;
-  nccf: number;
-  tax: number;
-  grats: number;
+  singleRate: number | null;
+  doubleRate: number | null;
+  tripleRate: number | null;
+  nccf: number | null;
+  tax: number | null;
+  grats: number | null;
   enableAgent: boolean;
   enableAdmin: boolean;
+  cruiseShip?: ICruiseShip | null;
+  cabins: ICabinDetails[];
+  currency:string
 }
 
 export interface ICruiseShip {
@@ -52,12 +69,17 @@ export interface ICabinRow {
   grats: number;
 }
 
+// ----------------------------
 // API DTO types
+// ----------------------------
 export interface IDestination { destinationCode: string; destinationName: string; }
 export interface IPort { departurePortId: string; departurePortName: string; }
 export interface IShip { cruiseShipId: string; shipName: string; }
 export interface ICruiseLineApi { cruiseLineId: string; cruiseLineName: string; }
 
+// ----------------------------
+// Service
+// ----------------------------
 class CruiseService {
   private route = "/api/CruiseInventories";
 
@@ -69,57 +91,55 @@ class CruiseService {
   saveCruiseInventory = (data: ICruiseInventory) => {
     const payload: any = {
       CruiseInventoryDto: {
+        CruiseInventoryId: data.id ? Number(data.id) : undefined,
         SailDate: data.sailDate,
         GroupId: data.groupId,
         PackageDescription: data.packageName,
         Nights: Number(data.nights || 0),
         CategoryId: data.categoryId,
-        CruiseShip: data.cruiseShip ? {
-          CruiseShipId: Number(data.cruiseShip.cruiseShipId || 0),
-          ShipName: data.cruiseShip.shipName || "",
-          ShipCode: data.cruiseShip.shipCode || "",
-          CruiseLine: {
-            CruiseLineId: Number(data.cruiseShip.cruiseLine?.cruiseLineId || 0),
-            CruiseLineName: data.cruiseShip.cruiseLine?.cruiseLineName ?? "",
-            CruiseLineCode: data.cruiseShip.cruiseLine?.cruiseLineCode ?? ""
-          }
-        } : null,
-        Destination: { DestinationCode: data.destination },
-        DeparturePort: { DeparturePortId: Number(data.departurePort || 0) }
+        CruiseShip: data.cruiseShip
+          ? {
+              CruiseShipId: Number(data.cruiseShip.cruiseShipId || 0),
+              ShipName: data.cruiseShip.shipName || "",
+              ShipCode: data.cruiseShip.shipCode || "",
+              CruiseLine: {
+                CruiseLineId: Number(data.cruiseShip.cruiseLine?.cruiseLineId || 0),
+                CruiseLineName: data.cruiseShip.cruiseLine?.cruiseLineName ?? "",
+                CruiseLineCode: data.cruiseShip.cruiseLine?.cruiseLineCode ?? "",
+              },
+            }
+          : null,
+        Destination: { DestinationCode: data.destinationId },
+        DeparturePort: { DeparturePortId: Number(data.departurePortId || 0) },
       },
       CruisePricingInventoryDto: {
         CabinOccupancy: data.cabinOccupancy,
-        CabinNoType: data.stateroomType
+        CabinNoType: data.stateroom,
+        PricingType: data.pricingType,
+        CommissionPercentage: data.commissionPercentage,
+        SinglePrice: data.singleRate,
+        DoublePrice: data.doubleRate,
+        ThreeFourthPrice: data.tripleRate,
+        NCCF: data.nccf,
+        Tax: data.tax,
+        Grats: data.grats,
+        PriceValidFrom: new Date().toISOString(),
+        PriceValidTo: new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString(),
+        EnableAgent: data.enableAgent,
+        EnableAdmin: data.enableAdmin,
       },
-      SinglePrice: data.singlePrice,
-      DoublePrice: data.doublePrice,
-      ThreeFourthPrice: data.threeFourthPrice,
-      NCCF: data.nccf,
-      Tax: data.tax,
-      Grats: data.grats,
-      CabinCategory: data.stateroomType,
-      Category: data.categoryId,
-      PriceValidFrom: new Date().toISOString(),
-      PriceValidTo: new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString(),
-      EnableAgent: data.enableAgent,
-      EnableAdmin: data.enableAdmin,
-      Cabins: (data.cabins || []).map(c => ({
+      Cabins: (data.cabins || []).map((c) => ({
         CabinNo: c.cabinNo,
-        Status: c.status,
+        CabinOccupancy: c.cabinOccupancy,
         Type: c.cabinType,
-        SinglePrice: c.singlePrice,
-        DoublePrice: c.doublePrice,
-        ThreeFourthPrice: c.threeFourthPrice,
+        SinglePrice: c.singleRate,
+        DoublePrice: c.doubleRate,
+        ThreeFourthPrice: c.tripleRate,
         NCCF: c.nccf,
         Tax: c.tax,
-        Grats: c.grats
-      }))
+        Grats: c.grats,
+      })),
     };
-
-    // if editing existing inventory, include id where backend expects it
-    if (data.cruiseInventoryId) {
-      payload.CruiseInventoryDto.CruiseInventoryId = Number(data.cruiseInventoryId);
-    }
 
     return ApiUtility.post<IApiResponse<void>>(`${this.route}`, payload);
   };

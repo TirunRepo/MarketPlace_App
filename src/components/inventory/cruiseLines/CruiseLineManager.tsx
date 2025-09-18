@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect } from "react";
 import { Table, Button, Card, Row, Col } from "react-bootstrap";
 import EditLineModal from "./EditLine";
-import CruiseLineService, { type CruiseLineDto } from "../../Services/cruiseLines/CruiseLinesServices";
+import CruiseLineService, { type CruiseLine } from "../../Services/cruiseLines/CruiseLinesServices";
 import CustomPagination from "../../../common/CustomPagination";
 import LoadingOverlay from "../../../common/LoadingOverlay";
 import { useToast } from "../../../common/Toaster";
@@ -10,11 +10,11 @@ import ConfirmationModal from "../../../common/ConfirmationModal";
 const DEFAULT_PAGE_SIZE = 5;
 
 const CruiseLineManager: React.FC = () => {
-  const [lines, setLines] = useState<CruiseLineDto[]>([]);
-  const [selectedLine, setSelectedLine] = useState<CruiseLineDto>({
-    cruiseLineId: "",
-    cruiseLineCode: "",
-    cruiseLineName: "",
+  const [lines, setLines] = useState<CruiseLine[]>([]);
+  const [selectedLine, setSelectedLine] = useState<CruiseLine>({
+    id: null,
+    code: "",
+    name: "",
   });
 
   const [modalVisible, setModalVisible] = useState(false);
@@ -28,37 +28,33 @@ const CruiseLineManager: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const { showToast } = useToast();
 
-  // Fetch cruise lines
-  const fetchLines = useCallback(
-    async (page = currentPage, size = pageSize) => {
-      setLoading(true);
-      try {
-        const data = await CruiseLineService.getCruiseLines(page, size);
-        setLines(data.data.items || []);
-        setCurrentPage(data.data.currentPage || 1);
-        setTotalPages(data.data.totalPages || 1);
-      } catch (error) {
-        console.error("Error fetching cruise lines", error);
-        showToast("Failed to fetch cruise lines", "error");
-      } finally {
-        setLoading(false);
-      }
-    },
-    [currentPage, pageSize, showToast]
-  );
+  // ✅ Fetch cruise lines when page/pageSize changes
+useEffect(() => {
+  const fetchLines = async () => {
+    setLoading(true);
+    try {
+      const res = await CruiseLineService.getCruiseLines(currentPage, pageSize);
+      setLines(res.data.items || []);
+      setTotalPages(res.data.totalPages || 1);
+    } catch (error) {
+      console.error("Error fetching cruise lines", error);
+      showToast("Failed to fetch cruise lines", "error");
+    } finally {
+      setLoading(false);
+    }
+  };
+  fetchLines();
+}, [currentPage, pageSize]);
 
-  useEffect(() => {
-    fetchLines(currentPage, pageSize);
-  }, [currentPage, pageSize, fetchLines]);
 
   // Add
   const handleAdd = () => {
-    setSelectedLine({ cruiseLineId: "", cruiseLineCode: "", cruiseLineName: "" });
+    setSelectedLine({ id: null, code: "", name: "" });
     setModalVisible(true);
   };
 
   // Edit
-  const handleEdit = (line: CruiseLineDto) => {
+  const handleEdit = (line: CruiseLine) => {
     setSelectedLine(line);
     setModalVisible(true);
   };
@@ -75,7 +71,7 @@ const CruiseLineManager: React.FC = () => {
     try {
       await CruiseLineService.deleteCruiseLine(lineToDelete);
       showToast("Cruise line deleted successfully", "success");
-      fetchLines(1, pageSize); // reset to first page after delete
+      setCurrentPage(1); // reset to first page after delete
     } catch (error) {
       console.error("Error deleting cruise line", error);
       showToast("Failed to delete cruise line", "error");
@@ -87,10 +83,10 @@ const CruiseLineManager: React.FC = () => {
   };
 
   // Save
-  const handleSave = async (lineData: CruiseLineDto) => {
+  const handleSave = async (lineData: CruiseLine) => {
     setLoading(true);
     try {
-      if (lineData.cruiseLineId) {
+      if (lineData.id) {
         await CruiseLineService.updateCruiseLine(lineData);
         showToast("Cruise line updated successfully", "success");
       } else {
@@ -98,7 +94,7 @@ const CruiseLineManager: React.FC = () => {
         showToast("Cruise line added successfully", "success");
       }
       setModalVisible(false);
-      fetchLines(1, pageSize); // reset to first page after save
+      setCurrentPage(1); // reset to first page after save
     } catch (error) {
       console.error("Error saving cruise line", error);
       showToast("Failed to save cruise line", "error");
@@ -136,9 +132,9 @@ const CruiseLineManager: React.FC = () => {
               <tbody>
                 {lines.length > 0 ? (
                   lines.map((line) => (
-                    <tr key={line.cruiseLineId}>
-                      <td>{line.cruiseLineCode}</td>
-                      <td>{line.cruiseLineName}</td>
+                    <tr key={line.id}>
+                      <td>{line.code}</td>
+                      <td>{line.name}</td>
                       <td className="text-center d-flex justify-content-center gap-2">
                         <Button
                           size="sm"
@@ -150,7 +146,7 @@ const CruiseLineManager: React.FC = () => {
                         <Button
                           size="sm"
                           variant="outline-danger"
-                          onClick={() => handleDelete(line.cruiseLineId!)}
+                          onClick={() => handleDelete(line.id!)}
                         >
                           Delete
                         </Button>

@@ -2,21 +2,21 @@ import React from "react";
 import { Modal, Button, Form, Row, Col } from "react-bootstrap";
 import { Formik, Form as FormikForm, ErrorMessage } from "formik";
 import * as Yup from "yup";
-import type { CruiseLineDto } from "../../Services/cruiseLines/CruiseLinesServices";
+import type { CruiseLine } from "../../Services/cruiseLines/CruiseLinesServices";
 
 interface EditLineModalProps {
   show: boolean;
   onHide: () => void;
-  lineData: CruiseLineDto;
-  onSave: (data: CruiseLineDto) => void;
+  lineData: CruiseLine;
+  onSave: (data: CruiseLine) => void;
 }
 
 // Validation schema
 const validationSchema = Yup.object().shape({
-  cruiseLineCode: Yup.string()
+  code: Yup.string()
     .max(10, "Maximum 10 characters allowed")
     .required("Cruise Line Code is required"),
-  cruiseLineName: Yup.string()
+  name: Yup.string()
     .max(50, "Maximum 50 characters allowed")
     .required("Cruise Line Name is required"),
 });
@@ -26,14 +26,14 @@ const EditLine: React.FC<EditLineModalProps> = ({ show, onHide, lineData, onSave
     <Modal show={show} onHide={onHide} size="lg" centered backdrop="static" keyboard={false}>
       <Formik
         enableReinitialize
-        initialValues={lineData || { cruiseLineId: "", cruiseLineCode: "", cruiseLineName: "" }}
+        initialValues={lineData || { id: "", code: "", name: "" }}
         validationSchema={validationSchema}
         onSubmit={(values) => onSave(values)}
       >
         {({ handleChange, handleBlur, values, errors, touched }) => (
           <FormikForm>
             <Modal.Header closeButton>
-              <Modal.Title>{values.cruiseLineId ? "Edit Cruise Line" : "Add Cruise Line"}</Modal.Title>
+              <Modal.Title>{values.id ? "Edit Cruise Line" : "Add Cruise Line"}</Modal.Title>
             </Modal.Header>
 
             <Modal.Body className="px-4 py-3">
@@ -42,7 +42,7 @@ const EditLine: React.FC<EditLineModalProps> = ({ show, onHide, lineData, onSave
                 <Col md={4} style={{ display: "none" }}>
                   <Form.Group controlId="cruiseLineId">
                     <Form.Label>Cruise Line ID</Form.Label>
-                    <Form.Control type="text" name="cruiseLineId" value={values.cruiseLineId || ""} readOnly />
+                    <Form.Control type="text" name="cruiseLineId" value={values.id || ""} readOnly />
                   </Form.Group>
                 </Col>
 
@@ -51,17 +51,17 @@ const EditLine: React.FC<EditLineModalProps> = ({ show, onHide, lineData, onSave
                   <Form.Group className="form-floating">
                     <Form.Control
                       type="text"
-                      id="cruiseLineCode"
-                      name="cruiseLineCode"
+                      id="code"
+                      name="code"
                       placeholder="Cruise Line Code"
-                      value={values.cruiseLineCode || ""}
+                      value={values.code || ""}
                       onChange={handleChange}
                       onBlur={handleBlur}
-                      isInvalid={!!errors.cruiseLineCode && touched.cruiseLineCode}
+                      isInvalid={!!errors.code && touched.code}
                     />
-                    <Form.Label htmlFor="cruiseLineCode">Cruise Line Code</Form.Label>
+                    <Form.Label htmlFor="code">Cruise Line Code</Form.Label>
                     <Form.Control.Feedback type="invalid">
-                      <ErrorMessage name="cruiseLineCode" />
+                      <ErrorMessage name="code" />
                     </Form.Control.Feedback>
                   </Form.Group>
                 </Col>
@@ -71,17 +71,17 @@ const EditLine: React.FC<EditLineModalProps> = ({ show, onHide, lineData, onSave
                   <Form.Group className="form-floating">
                     <Form.Control
                       type="text"
-                      id="cruiseLineName"
-                      name="cruiseLineName"
+                      id="name"
+                      name="name"
                       placeholder="Cruise Line Name"
-                      value={values.cruiseLineName || ""}
+                      value={values.name || ""}
                       onChange={handleChange}
                       onBlur={handleBlur}
-                      isInvalid={!!errors.cruiseLineName && touched.cruiseLineName}
+                      isInvalid={!!errors.name && touched.name}
                     />
-                    <Form.Label htmlFor="cruiseLineName">Cruise Line Name</Form.Label>
+                    <Form.Label htmlFor="name">Cruise Line Name</Form.Label>
                     <Form.Control.Feedback type="invalid">
-                      <ErrorMessage name="cruiseLineName" />
+                      <ErrorMessage name="name" />
                     </Form.Control.Feedback>
                   </Form.Group>
                 </Col>
