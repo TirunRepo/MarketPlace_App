@@ -2,20 +2,20 @@ import React  from "react";
 import { Modal, Button, Row, Col, Form } from "react-bootstrap";
 import { Formik, Form as FormikForm, Field, ErrorMessage } from "formik";
 import * as Yup from "yup";
-import type { ShipDto, CruiseLineDto } from "../../Services/cruiseShips/CruiseShipsService";
+import type { Ship, CruiseLineD } from "../../Services/cruiseShips/CruiseShipsService";
 
 interface ShipFormModalProps {
   show: boolean;
   onHide: () => void;
-  shipData: ShipDto;
-  cruiseLines: CruiseLineDto[];
-  onSave: (data: ShipDto) => void;
+  shipData: Ship;
+  cruiseLines: CruiseLineD[];
+  onSave: (data: Ship) => void;
 }
 
 // Validation schema
 const ShipSchema = Yup.object().shape({
-  shipName: Yup.string().max(50, "Max 50 characters").required("Ship Name is required"),
-  shipCode: Yup.string().max(20, "Max 20 characters").required("Ship Code is required"),
+  name: Yup.string().max(50, "Max 50 characters").required("Ship Name is required"),
+  code: Yup.string().max(20, "Max 20 characters").required("Ship Code is required"),
   cruiseLineId: Yup.string().required("Cruise Line is required"),
 });
 
@@ -23,15 +23,14 @@ const EditShips: React.FC<ShipFormModalProps> = ({ show, onHide, shipData, cruis
   return (
     <Modal show={show} onHide={onHide} size="lg" centered>
       <Modal.Header closeButton>
-        <Modal.Title>{shipData.cruiseShipId ? "Edit Ship" : "Add Ship"}</Modal.Title>
+        <Modal.Title>{shipData.id ? "Edit Ship" : "Add Ship"}</Modal.Title>
       </Modal.Header>
       <Formik
         enableReinitialize
         initialValues={shipData}
         validationSchema={ShipSchema}
         onSubmit={(values) => {
-          const selectedLine = cruiseLines.find(line => line.cruiseLineId === values.cruiseLineId);
-          onSave({ ...values, cruiseLine: selectedLine });
+          onSave(values);
         }}
       >
         {({ handleChange, handleBlur, values, errors, touched }) => (
@@ -43,11 +42,11 @@ const EditShips: React.FC<ShipFormModalProps> = ({ show, onHide, shipData, cruis
                   <Field
                     as={Form.Control}
                     type="text"
-                    name="shipName"
-                    value={values.shipName || ""}
+                    name="name"
+                    value={values.name || ""}
                     onChange={handleChange}
                     onBlur={handleBlur}
-                    isInvalid={!!errors.shipName && touched.shipName}
+                    isInvalid={!!errors.name && touched.name}
                   />
                   <Form.Control.Feedback type="invalid">
                     <ErrorMessage name="shipName" />
@@ -58,14 +57,14 @@ const EditShips: React.FC<ShipFormModalProps> = ({ show, onHide, shipData, cruis
                   <Field
                     as={Form.Control}
                     type="text"
-                    name="shipCode"
-                    value={values.shipCode || ""}
+                    name="code"
+                    value={values.code || ""}
                     onChange={handleChange}
                     onBlur={handleBlur}
-                    isInvalid={!!errors.shipCode && touched.shipCode}
+                    isInvalid={!!errors.code && touched.code}
                   />
                   <Form.Control.Feedback type="invalid">
-                    <ErrorMessage name="shipCode" />
+                    <ErrorMessage name="code" />
                   </Form.Control.Feedback>
                 </Col>
               </Row>
@@ -83,8 +82,8 @@ const EditShips: React.FC<ShipFormModalProps> = ({ show, onHide, shipData, cruis
                   >
                     <option value="">-- Select Cruise Line --</option>
                     {cruiseLines.map((line) => (
-                      <option key={line.cruiseLineId} value={line.cruiseLineId}>
-                        {line.cruiseLineCode} - {line.cruiseLineName}
+                      <option key={line.id} value={line.id}>
+                        {line.name}
                       </option>
                     ))}
                   </Field>

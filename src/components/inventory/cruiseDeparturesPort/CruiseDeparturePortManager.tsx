@@ -1,8 +1,8 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { Table, Button, Card, Col, Row } from "react-bootstrap";
 import DeparturePortService, {
-  type DestinationDto,
-  type DeparturePortDto,
+  type DestinationDTO,
+  type DeparturePort,
 } from "../../Services/cruiseDepartures/DeparturePortService";
 import EditCruiseDeparture from "./EditCruiseDeparturePort";
 import CustomPagination from "../../../common/CustomPagination";
@@ -13,16 +13,16 @@ import ConfirmationModal from "../../../common/ConfirmationModal";
 const DEFAULT_PAGE_SIZE = 5;
 
 const CruiseDeparturePortManager: React.FC = () => {
-  const [ports, setPorts] = useState<DeparturePortDto[]>([]);
-  const [destinations, setDestinations] = useState<DestinationDto[]>([]);
-  const [selectedPort, setSelectedPort] = useState<DeparturePortDto>({
-    departurePortCode: "",
-    departurePortName: "",
-    destinationCode: "",
+  const [ports, setPorts] = useState<DeparturePort[]>([]);
+  const [destinations, setDestinations] = useState<DestinationDTO[]>([]);
+  const [selectedPort, setSelectedPort] = useState<DeparturePort>({
+    id: null,
+    name: "",
+    code:"",
   });
   const [modalVisible, setModalVisible] = useState(false);
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
-  const [portToDelete, setPortToDelete] = useState<string | null>(null);
+  const [portToDelete, setPortToDelete] = useState<number | null>(null);
 
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -37,9 +37,9 @@ const CruiseDeparturePortManager: React.FC = () => {
     try {
       const response = await DeparturePortService.getAll(page, size);
       const data = response.data;
-      setPorts(data.items);
-      setCurrentPage(data.currentPage);
-      setTotalPages(data.totalPages);
+      setPorts(data.data.items);
+      setCurrentPage(data.data.currentPage);
+      setTotalPages(data.data.totalPages);
     } catch (error) {
       console.error(error);
       showToast("Failed to fetch departure ports.", "error");
@@ -74,19 +74,19 @@ const CruiseDeparturePortManager: React.FC = () => {
   // Handlers
   const handleAdd = () => {
     setSelectedPort({
-      departurePortCode: "",
-      departurePortName: "",
-      destinationCode: "",
+      code: "",
+      name: "",
+      destinationId: 0,
     });
     setModalVisible(true);
   };
 
-  const handleEdit = (port: DeparturePortDto) => {
+  const handleEdit = (port: DeparturePort) => {
     setSelectedPort(port);
     setModalVisible(true);
   };
 
-  const handleDelete = (portId: string) => {
+  const handleDelete = (portId: number) => {
     setPortToDelete(portId);
     setDeleteModalVisible(true);
   };
@@ -108,11 +108,11 @@ const CruiseDeparturePortManager: React.FC = () => {
     }
   };
 
-  const handleSave = async (portData: DeparturePortDto) => {
+  const handleSave = async (portData: DeparturePort) => {
     setLoading(true);
     try {
-      if (portData.departurePortId) {
-        await DeparturePortService.update(portData);
+      if (portData.id) {
+        await DeparturePortService.update(portData.id,portData);
         showToast("Departure port updated successfully.", "success");
       } else {
         await DeparturePortService.add(portData);
@@ -155,10 +155,10 @@ const CruiseDeparturePortManager: React.FC = () => {
               <tbody>
                 {ports.length > 0 ? (
                   ports.map((port) => (
-                    <tr key={port.departurePortId}>
-                      <td>{port.departurePortCode}</td>
-                      <td>{port.departurePortName}</td>
-                      <td>{port.destinationCode}</td>
+                    <tr key={port.id}>
+                      <td>{port.code}</td>
+                      <td>{port.name}</td>
+                      <td>{port.destinationId}</td>
                       <td className="d-flex gap-2">
                         <Button
                           size="sm"
@@ -167,11 +167,11 @@ const CruiseDeparturePortManager: React.FC = () => {
                         >
                           Edit
                         </Button>
-                        {port.departurePortId && (
+                        {port.id && (
                           <Button
                             size="sm"
                             variant="outline-danger"
-                            onClick={() => handleDelete(port.departurePortId!)}
+                            onClick={() => handleDelete(port.id!)}
                           >
                             Delete
                           </Button>

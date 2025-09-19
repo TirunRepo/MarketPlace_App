@@ -1,19 +1,20 @@
 import type { IPagedData } from "../../../common/IPagedData";
 import ApiUtility, { type IApiResponse } from "../../../utility/ApiUtility";
 
-export interface DestinationDto {
-    destinationCode: string;
-    destinationName: string;
+export interface Destination {
+    id?:number
+    code: string;
+    name: string;
 }
 
 class CruiseDestinationService {
-    private route = "/api/CruiseDestinations";
+    private route = "CruiseDestinations";
 
     getAll = (page: number, pageSize: number) => 
-        ApiUtility.get<IPagedData<DestinationDto>>(`${this.route}?page=${page}&pageSize=${pageSize}`);
-    add = (data: DestinationDto) => ApiUtility.post<IApiResponse<DestinationDto>>(this.route, data);
-    update = (data: DestinationDto) => ApiUtility.post<IApiResponse<DestinationDto>>(`${this.route}/update`, data);
-    delete = (code: string) => ApiUtility.delete<IApiResponse<void>>(`${this.route}/${code}`);
+        ApiUtility.get<IApiResponse<IPagedData<Destination>>>(`${this.route}?page=${page}&pageSize=${pageSize}`);
+    add = (data: Destination) => ApiUtility.post<IApiResponse<Destination>>(this.route, data);
+    update = (id:number,data: Destination) => ApiUtility.post<IApiResponse<Destination>>(`${this.route}/update/${id}`, data);
+    delete = (code: number) => ApiUtility.post<IApiResponse<boolean>>(`${this.route}/${code}`);
 }
 
 export default new CruiseDestinationService();

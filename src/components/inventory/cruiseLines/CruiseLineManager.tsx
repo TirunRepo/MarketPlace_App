@@ -19,7 +19,7 @@ const CruiseLineManager: React.FC = () => {
 
   const [modalVisible, setModalVisible] = useState(false);
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
-  const [lineToDelete, setLineToDelete] = useState<string | null>(null);
+  const [lineToDelete, setLineToDelete] = useState<number | null>(null);
 
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -28,14 +28,13 @@ const CruiseLineManager: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const { showToast } = useToast();
 
-  // ✅ Fetch cruise lines when page/pageSize changes
-useEffect(() => {
+  // ✅ Fetch cruise lines function
   const fetchLines = async () => {
     setLoading(true);
     try {
       const res = await CruiseLineService.getCruiseLines(currentPage, pageSize);
-      setLines(res.data.items || []);
-      setTotalPages(res.data.totalPages || 1);
+      setLines(res.data.data.items || []);
+      setTotalPages(res.data.data.totalPages || 1);
     } catch (error) {
       console.error("Error fetching cruise lines", error);
       showToast("Failed to fetch cruise lines", "error");
@@ -43,9 +42,11 @@ useEffect(() => {
       setLoading(false);
     }
   };
-  fetchLines();
-}, [currentPage, pageSize]);
 
+  // Fetch cruise lines on page change or page size change
+  useEffect(() => {
+    fetchLines();
+  }, [currentPage, pageSize]);
 
   // Add
   const handleAdd = () => {
@@ -60,7 +61,7 @@ useEffect(() => {
   };
 
   // Delete
-  const handleDelete = (id: string) => {
+  const handleDelete = (id: number) => {
     setLineToDelete(id);
     setDeleteModalVisible(true);
   };
@@ -72,6 +73,7 @@ useEffect(() => {
       await CruiseLineService.deleteCruiseLine(lineToDelete);
       showToast("Cruise line deleted successfully", "success");
       setCurrentPage(1); // reset to first page after delete
+      fetchLines(); // Re-fetch lines after deletion
     } catch (error) {
       console.error("Error deleting cruise line", error);
       showToast("Failed to delete cruise line", "error");
@@ -87,14 +89,16 @@ useEffect(() => {
     setLoading(true);
     try {
       if (lineData.id) {
-        await CruiseLineService.updateCruiseLine(lineData);
+        await CruiseLineService.updateCruiseLine(lineData.id,lineData);
         showToast("Cruise line updated successfully", "success");
       } else {
         await CruiseLineService.addCruiseLine(lineData);
         showToast("Cruise line added successfully", "success");
       }
+      // After save, refresh the lines and close modal
       setModalVisible(false);
       setCurrentPage(1); // reset to first page after save
+      fetchLines(); // Re-fetch lines after save
     } catch (error) {
       console.error("Error saving cruise line", error);
       showToast("Failed to save cruise line", "error");
@@ -120,7 +124,13 @@ useEffect(() => {
       <Row>
         <Col xs={12}>
           <Card className="p-4 shadow-sm">
-            <h4 className="mb-4">Cruise Lines</h4>
+            <div className="d-flex justify-content-between align-items-center mb-4">
+              <h4>Cruise Lines</h4>
+              <Button variant="outline-secondary" size="sm" onClick={fetchLines}>
+                Refresh
+              </Button>
+            </div>
+
             <Table hover responsive striped bordered className="align-middle">
               <thead className="table-light">
                 <tr>

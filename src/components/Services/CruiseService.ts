@@ -81,7 +81,7 @@ export interface ICruiseLineApi { cruiseLineId: string; cruiseLineName: string; 
 // Service
 // ----------------------------
 class CruiseService {
-  private route = "/api/CruiseInventories";
+  private route = "CruiseInventories";
 
   getDestinations = () => ApiUtility.get<IDestination[]>(`${this.route}/destinations`);
   getCruiseLines = () => ApiUtility.get<ICruiseLineApi[]>(`${this.route}/cruiselines`);

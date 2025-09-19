@@ -2,25 +2,25 @@ import React from "react";
 import { Modal, Button, Form, Row, Col } from "react-bootstrap";
 import { Formik, Form as FormikForm, ErrorMessage } from "formik";
 import * as Yup from "yup";
-import type { DeparturePortDto, DestinationDto } from "../../Services/cruiseDepartures/DeparturePortService";
+import type { DeparturePort, DestinationDTO} from "../../Services/cruiseDepartures/DeparturePortService";
 
 interface Props {
   show: boolean;
   onHide: () => void;
-  onSave: (data: DeparturePortDto) => void;
-  selectedPort: DeparturePortDto;
-  destinations: DestinationDto[];
+  onSave: (data: DeparturePort) => void;
+  selectedPort: DeparturePort;
+  destinations: DestinationDTO[];
 }
 
 // Validation Schema
 const validationSchema = Yup.object().shape({
-  departurePortCode: Yup.string()
+  code: Yup.string()
     .max(10, "Max 10 characters allowed")
     .required("Departure Port Code is required"),
-  departurePortName: Yup.string()
+  name: Yup.string()
     .max(50, "Max 50 characters allowed")
     .required("Departure Port Name is required"),
-  destinationCode: Yup.string().required("Destination is required"),
+  destinationId: Yup.string().required("Destination is required"),
 });
 
 const EditCruiseDeparture: React.FC<Props> = ({
@@ -41,7 +41,7 @@ const EditCruiseDeparture: React.FC<Props> = ({
     >
       <Modal.Header closeButton>
         <Modal.Title className="fw-bold">
-          {selectedPort.departurePortId
+          {selectedPort.id
             ? "Edit Departure Port"
             : "Add Departure Port"}
         </Modal.Title>
@@ -63,21 +63,21 @@ const EditCruiseDeparture: React.FC<Props> = ({
                   <Form.Group className="form-floating">
                     <Form.Control
                       type="text"
-                      name="departurePortCode"
-                      id="departurePortCode"
+                      name="code"
+                      id="code"
                       placeholder="Departure Port Code"
-                      value={values.departurePortCode || ""}
+                      value={values.code || ""}
                       onChange={handleChange}
                       onBlur={handleBlur}
                       isInvalid={
-                        !!errors.departurePortCode && touched.departurePortCode
+                        !!errors.code && touched.code
                       }
                     />
-                    <Form.Label htmlFor="departurePortCode">
+                    <Form.Label htmlFor="code">
                       Departure Port Code
                     </Form.Label>
                     <Form.Control.Feedback type="invalid">
-                      <ErrorMessage name="departurePortCode" />
+                      <ErrorMessage name="code" />
                     </Form.Control.Feedback>
                   </Form.Group>
                 </Col>
@@ -86,21 +86,21 @@ const EditCruiseDeparture: React.FC<Props> = ({
                   <Form.Group className="form-floating">
                     <Form.Control
                       type="text"
-                      name="departurePortName"
-                      id="departurePortName"
+                      name="name"
+                      id="name"
                       placeholder="Departure Port Name"
-                      value={values.departurePortName || ""}
+                      value={values.name || ""}
                       onChange={handleChange}
                       onBlur={handleBlur}
                       isInvalid={
-                        !!errors.departurePortName && touched.departurePortName
+                        !!errors.name && touched.name
                       }
                     />
-                    <Form.Label htmlFor="departurePortName">
+                    <Form.Label htmlFor="name">
                       Departure Port Name
                     </Form.Label>
                     <Form.Control.Feedback type="invalid">
-                      <ErrorMessage name="departurePortName" />
+                      <ErrorMessage name="name" />
                     </Form.Control.Feedback>
                   </Form.Group>
                 </Col>
@@ -110,25 +110,25 @@ const EditCruiseDeparture: React.FC<Props> = ({
                 <Col md={12}>
                   <Form.Group className="form-floating">
                     <Form.Select
-                      name="destinationCode"
-                      id="destinationCode"
-                      value={values.destinationCode || ""}
+                      name="code"
+                      id="code"
+                      value={values.code || ""}
                       onChange={handleChange}
                       onBlur={handleBlur}
                       isInvalid={
-                        !!errors.destinationCode && touched.destinationCode
+                        !!errors.code && touched.code
                       }
                     >
                       <option value="">Select Destination</option>
                       {destinations.map((d) => (
-                        <option key={d.destinationCode} value={d.destinationCode}>
-                          {d.destinationName}
+                        <option key={d.id} value={d.name}>
+                          {d.name}
                         </option>
                       ))}
                     </Form.Select>
-                    <Form.Label htmlFor="destinationCode">Destination</Form.Label>
+                    <Form.Label htmlFor="destinationId">Destination</Form.Label>
                     <Form.Control.Feedback type="invalid">
-                      <ErrorMessage name="destinationCode" />
+                      <ErrorMessage name="destinationId" />
                     </Form.Control.Feedback>
                   </Form.Group>
                 </Col>

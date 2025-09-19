@@ -33,7 +33,7 @@ export interface IMarkupResponse {
 }
 
 class MarkupService {
-  private route = "/api/Markup";
+  private route = "Markup";
 
   createMarkup = (data: IMarkupRequest) =>
     ApiUtility.post<IApiResponse<IMarkupResponse>>(`${this.route}`, data);

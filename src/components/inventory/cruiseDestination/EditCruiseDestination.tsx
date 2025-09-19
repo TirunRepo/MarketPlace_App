@@ -2,21 +2,21 @@ import React from "react";
 import { Modal, Button, Form, Row, Col } from "react-bootstrap";
 import { Formik, Form as FormikForm, ErrorMessage } from "formik";
 import * as Yup from "yup";
-import type { DestinationDto } from "../../Services/cruiseDestination/CruiseDestinationService";
+import type { Destination } from "../../Services/cruiseDestination/CruiseDestinationService";
 
 interface Props {
   show: boolean;
   onHide: () => void;
-  destination?: DestinationDto;
-  onSave: (data: DestinationDto) => void;
+  destination?: Destination;
+  onSave: (data: Destination) => void;
 }
 
 // Validation schema using Yup
 const validationSchema = Yup.object().shape({
-  destinationCode: Yup.string()
+  code: Yup.string()
     .max(10, "Maximum 10 characters allowed")
     .required("Destination Code is required"),
-  destinationName: Yup.string()
+  name: Yup.string()
     .max(50, "Maximum 50 characters allowed")
     .required("Destination Name is required"),
 });
@@ -30,7 +30,7 @@ const EditCruiseDestination: React.FC<Props> = ({ show, onHide, destination, onS
 
       <Formik
         enableReinitialize
-        initialValues={destination || { destinationCode: "", destinationName: "" }}
+        initialValues={destination || { code: "", name: "" }}
         validationSchema={validationSchema}
         onSubmit={(values) => onSave(values)}
       >
@@ -42,17 +42,17 @@ const EditCruiseDestination: React.FC<Props> = ({ show, onHide, destination, onS
                   <Form.Group className="form-floating">
                     <Form.Control
                       type="text"
-                      name="destinationCode"
-                      id="destinationCode"
+                      name="code"
+                      id="code"
                       placeholder="Destination Code"
-                      value={values.destinationCode}
+                      value={values.code}
                       onChange={handleChange}
                       onBlur={handleBlur}
-                      isInvalid={!!errors.destinationCode && touched.destinationCode}
+                      isInvalid={!!errors.code && touched.code}
                     />
-                    <Form.Label htmlFor="destinationCode">Destination Code</Form.Label>
+                    <Form.Label htmlFor="code">Destination Code</Form.Label>
                     <Form.Control.Feedback type="invalid">
-                      <ErrorMessage name="destinationCode" />
+                      <ErrorMessage name="code" />
                     </Form.Control.Feedback>
                   </Form.Group>
                 </Col>
@@ -61,17 +61,17 @@ const EditCruiseDestination: React.FC<Props> = ({ show, onHide, destination, onS
                   <Form.Group className="form-floating">
                     <Form.Control
                       type="text"
-                      name="destinationName"
-                      id="destinationName"
+                      name="name"
+                      id="name"
                       placeholder="Destination Name"
-                      value={values.destinationName}
+                      value={values.name}
                       onChange={handleChange}
                       onBlur={handleBlur}
-                      isInvalid={!!errors.destinationName && touched.destinationName}
+                      isInvalid={!!errors.name && touched.name}
                     />
-                    <Form.Label htmlFor="destinationName">Destination Name</Form.Label>
+                    <Form.Label htmlFor="name">Destination Name</Form.Label>
                     <Form.Control.Feedback type="invalid">
-                      <ErrorMessage name="destinationName" />
+                      <ErrorMessage name="name" />
                     </Form.Control.Feedback>
                   </Form.Group>
                 </Col>

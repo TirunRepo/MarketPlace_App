@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Row, Col, Button, Card, Table } from "react-bootstrap";
-import ShipService, { type ShipDto, type CruiseLineDto } from "../../Services/cruiseShips/CruiseShipsService";
+import ShipService, { type Ship, type CruiseLineD } from "../../Services/cruiseShips/CruiseShipsService";
 import EditShips from "./EditShips";
 import CustomPagination from "../../../common/CustomPagination";
 import LoadingOverlay from "../../../common/LoadingOverlay";
@@ -8,10 +8,10 @@ import { useToast } from "../../../common/Toaster";
 import ConfirmationModal from "../../../common/ConfirmationModal";
 
 const CruiseShipsManager: React.FC = () => {
-  const [ships, setShips] = useState<ShipDto[]>([]);
-  const [cruiseLines, setCruiseLines] = useState<CruiseLineDto[]>([]);
+  const [ships, setShips] = useState<Ship[]>([]);
+  const [cruiseLines, setCruiseLines] = useState<CruiseLineD[]>([]);
   const [modalShow, setModalShow] = useState(false);
-  const [selectedShip, setSelectedShip] = useState<ShipDto>({ shipCode: "", shipName: "" });
+  const [selectedShip, setSelectedShip] = useState<Ship>({ code: "", name: "" });
 
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -23,14 +23,14 @@ const CruiseShipsManager: React.FC = () => {
 
   const { showToast } = useToast();
 
-  // Fetch ships with pagination
+  // Fetch ships
   const fetchShips = async (page = currentPage, size = pageSize) => {
     setLoading(true);
     try {
       const data = await ShipService.getShips(page, size);
-      setShips(data.data.items || []);
-      setCurrentPage(data.data.currentPage || 1);
-      setTotalPages(data.data.totalPages || 1);
+      setShips(data.data.data.items || []);
+      setCurrentPage(data.data.data.currentPage || 1);
+      setTotalPages(data.data.data.totalPages || 1);
     } catch (error) {
       console.error("Error fetching ships:", error);
       showToast("Failed to fetch ships", "error");
@@ -39,10 +39,10 @@ const CruiseShipsManager: React.FC = () => {
     }
   };
 
-  // Fetch cruise lines for dropdown
+  // Fetch cruise lines
   const fetchCruiseLines = async () => {
     try {
-      const data = await ShipService.getCruiseLines();
+      const data: any = await ShipService.getCruiseLines();
       setCruiseLines(data.data || []);
     } catch (error) {
       console.error("Error fetching cruise lines:", error);
@@ -50,17 +50,18 @@ const CruiseShipsManager: React.FC = () => {
     }
   };
 
+  // Initial load
   useEffect(() => {
     fetchShips(currentPage, pageSize);
     fetchCruiseLines();
   }, [currentPage, pageSize]);
 
-  // Save ship (add/update)
-  const handleSave = async (ship: ShipDto) => {
+  // Save ship (Add / Update)
+  const handleSave = async (ship: Ship) => {
     setLoading(true);
     try {
-      if (ship.cruiseShipId) {
-        await ShipService.updateShip(ship);
+      if (ship.id) {
+        await ShipService.updateShip(ship.id, ship);
         showToast("Ship updated successfully", "success");
       } else {
         await ShipService.addShip(ship);
@@ -99,6 +100,10 @@ const CruiseShipsManager: React.FC = () => {
     setDeleteModal(true);
   };
 
+  const handleRefresh = () => {
+    fetchShips(currentPage, pageSize);
+  };
+
   return (
     <div className="mt-4">
       <LoadingOverlay show={loading} />
@@ -110,7 +115,7 @@ const CruiseShipsManager: React.FC = () => {
             variant="primary"
             className="w-100"
             onClick={() => {
-              setSelectedShip({ shipCode: "", shipName: "" });
+              setSelectedShip({ code: "", name: "" });
               setModalShow(true);
             }}
           >
@@ -123,7 +128,13 @@ const CruiseShipsManager: React.FC = () => {
       <Row>
         <Col xs={12}>
           <Card className="p-4 shadow-sm">
-            <h4 className="mb-4 text-center">Ships List</h4>
+            <div className="d-flex justify-content-between align-items-center mb-3">
+              <h4 className="mb-0">Ships List</h4>
+              <Button variant="outline-secondary" size="sm" onClick={handleRefresh} title="Refresh list">
+                Refresh
+              </Button>
+            </div>
+
             <Table hover responsive striped bordered className="align-middle">
               <thead className="table-light">
                 <tr>
@@ -137,18 +148,31 @@ const CruiseShipsManager: React.FC = () => {
               <tbody>
                 {ships.length ? (
                   ships.map((ship) => (
-                    <tr key={ship.cruiseShipId}>
-                      <td>{ship.cruiseShipId}</td>
-                      <td>{ship.cruiseLine?.cruiseLineCode || "-"}</td>
-                      <td>{ship.shipCode}</td>
-                      <td>{ship.shipName}</td>
-                      <td className="text-center" style={{ display: "flex", justifyContent: "center", gap: "10px" }}>
-                        <Button size="sm" variant="outline-primary" onClick={() => { setSelectedShip(ship); setModalShow(true); }}>
-                          Edit
-                        </Button>
-                        <Button size="sm" variant="outline-danger" onClick={() => ship.cruiseShipId && handleDelete(ship.cruiseShipId)}>
-                          Delete
-                        </Button>
+                    <tr key={ship.id}>
+                      <td>{ship.id}</td>
+                      <td>{cruiseLines.find(cl => cl.id === ship.cruiseLineId)?.name || "-"}</td>
+                      <td>{ship.code}</td>
+                      <td>{ship.name}</td>
+                      <td className="text-center">
+                        <div style={{ display: "flex", justifyContent: "center", gap: "10px" }}>
+                          <Button
+                            size="sm"
+                            variant="outline-primary"
+                            onClick={() => {
+                              setSelectedShip(ship);
+                              setModalShow(true);
+                            }}
+                          >
+                            Edit
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline-danger"
+                            onClick={() => ship.id && handleDelete(ship.id)}
+                          >
+                            Delete
+                          </Button>
+                        </div>
                       </td>
                     </tr>
                   ))
@@ -162,6 +186,7 @@ const CruiseShipsManager: React.FC = () => {
               </tbody>
             </Table>
 
+            {/* Pagination */}
             <CustomPagination
               currentPage={currentPage}
               totalPages={totalPages}
